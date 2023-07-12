@@ -1,0 +1,14 @@
+torch==2.0.1
+torchvision
+cython
+numpy
+mmengine
+imagecorruptions
+scipy
+mmcv-full
+scikit-learn
+opencv-contrib-python-headless
+pydicom
+pyjpegls
+pylibjpeg-openjpeg
+pylibjpeg
