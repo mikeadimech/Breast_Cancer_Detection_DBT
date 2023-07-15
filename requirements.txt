@@ -1,6 +1,7 @@
 torch==2.0.1
 torchvision
 cython
+argparse
 numpy
 mmengine
 imagecorruptions
