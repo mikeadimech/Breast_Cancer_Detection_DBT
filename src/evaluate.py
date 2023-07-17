@@ -11,7 +11,10 @@ def main():
     dataset_path ='/data/md311/Breast_Cancer_Detection_DBT/data/' 
     df = read_dataset(dataset_path)
 
-    train_loader, test_loader, train_dataset, test_dataset = preprocess_dataset(df, dataset_path)
+    n_augment = 2
+    batch_size = 128
+
+    _, test_loader, _, test_dataset = preprocess_dataset(df, dataset_path, n_augment, batch_size)
     
 
     unique_labels = df.columns.values[3:]

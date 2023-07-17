@@ -14,7 +14,7 @@ def load_model_single(model_name, num_classes, from_path=None):
         n_splits = 2
     elif model_name=="ConvNeXt":
         model = load_convnext_model(num_classes, from_path)
-        model = freeze_layers(model, 8)
+        model = freeze_layers(model, 1)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
@@ -71,12 +71,20 @@ def load_resnet50_model(num_classes, saved_weights_path=None):
 def load_convnext_model(num_classes, saved_weights_path=None):
     # Load the pretrained model
     model = models.convnext_large(weights='DEFAULT')
+
+    summary(model=model, 
+        input_size=(32, 3, 224, 224), # make sure this is "input_size", not "input_shape"
+        # col_names=["input_size"], # uncomment for smaller output
+        col_names=["input_size", "output_size", "num_params", "trainable"],
+        col_width=20,
+        row_settings=["var_names"]
+    )
     
-    # Get the input of the fc layer
-    num_ftrs = model.fc.in_features
-    
-    # Re-define the fc layer / classifier
-    model.fc = nn.Linear(num_ftrs, num_classes)
+    # Get the number of input features to the last layer
+    num_ftrs = model.classifier[2].in_features
+
+    # Modify the final layer for binary classification
+    model.classifier[2] = nn.Linear(num_ftrs, num_classes)
 
     # Load the model weights from the saved file
     if saved_weights_path is not None:
@@ -91,25 +99,6 @@ def freeze_layers(model, n_layers_to_freeze):
             param.requires_grad = False
     return model
 
-def model_summary(model):
-    print("Model Summary")
-    print("-------------")
-    total_layers = 0
-    total_params = 0
-    trainable_params = 0
-
-    for name, layer in model.named_modules():
-        total_layers += 1
-        params = sum(p.numel() for p in layer.parameters())
-        trainable = sum(p.numel() for p in layer.parameters() if p.requires_grad)
-        total_params += params
-        trainable_params += trainable
-        print(f"{name}: {type(layer).__name__}, Params: {params}, Trainable: {trainable}")
-
-    print("\nTotal Layers:", total_layers)
-    print("Total Parameters:", total_params)
-    print("Total Trainable Parameters:", trainable_params)
-
 def get_loss_optimizer(model, hyperparameters):
     # Define the loss function
     criterion = nn.CrossEntropyLoss()
@@ -123,7 +112,7 @@ def get_loss_optimizer(model, hyperparameters):
     return criterion, optimizer
 
 def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, test_loader, unique_labels, \
-                   device, num_epochs, n_splits, model_name, save_weights=None, save_fig=None, evaluate=True):
+                   device, num_epochs, batch_size, n_splits, n_augment, model_name, save_weights=None, save_fig=None, evaluate=True):
     
     # log training process
     run = wandb.init(
@@ -132,6 +121,9 @@ def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, tes
     config={
         "learning_rate": optimizer.param_groups[-1]['lr'],
         "epochs": num_epochs,
+        "batch_size:": batch_size,
+        "n_splits": n_splits,
+        "n_augment": n_augment
     })
     
     model.to(device)
@@ -139,21 +131,16 @@ def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, tes
     # Initialize the KFold class
     kfold = StratifiedKFold(n_splits=n_splits, shuffle=True)
 
-    
-
-    print("hello")
     # Loop over all datasets in the ConcatDataset
     labels = []
 
-# Iterate over each Dataset in the ConcatDataset
+    # Iterate over each Dataset in the ConcatDataset
     for dataset in train_dataset.datasets:
         # Convert one-hot encoded labels to categorical labels and add them to the list
         labels.extend(np.argmax(dataset.data.iloc[:, 3:].values, axis=1))
 
     # Convert the list to a numpy array
     labels = np.array(labels)
-    print("there")
-
 
     train_losses = []
     val_losses = []
@@ -172,8 +159,8 @@ def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, tes
         # Define the data loaders for training and validation
         train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
         val_subsampler = torch.utils.data.SubsetRandomSampler(val_ids)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, sampler=train_subsampler)
-        val_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, sampler=val_subsampler)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=train_subsampler)
+        val_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=val_subsampler)
 
         # Train the model
         model.train()
@@ -251,8 +238,14 @@ def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, tes
     if evaluate==True:
         metrics = evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig)
         wandb.log(metrics)
+    else:
+        metrics = {}
 
     wandb.finish()
+
+    metrics['training_time'] = f"{h:02.0f}:{m:02.0f}:{s:02.0f}"
+
+    return metrics
 
 def evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig=None):
     

@@ -25,22 +25,22 @@ These instructions will guide you on how to set up and run the project on your l
 
 1. Clone the repository:
 
-  ```
-  git clone https://github.com/your-username/project-name.git
-  ```
+```
+git clone https://github.com/your-username/project-name.git
+```
 
 2. Navigate to the project directory:
    
-   ```
-   cd project-name
-   ```
+```
+cd project-name
+```
    
 
 3. Install the required dependencies:
 
-   ```
-   pip install -r requirements.txt
-   ```
+```
+pip install -r requirements.txt
+```
    
 
 ### Usage
@@ -55,10 +55,9 @@ python src/main.py --model Swin --transferlearning single
 
 Replace `Swin` and `single` with your desired values for the following arguments:
 
-- `--model`: Possible options: Swin, ViT, ResNet, Convnext. Default value: first_default_value.
-- `--transferlearning`: Possible options: single, multi. Default value: single_default_value.
-
-Add any other instructions or details about how to interact with the project.
+- `--model`: Possible options: `ResNet` (default), `Swin`, `ViT`, `ConvNeXt`
+- `--transferlearning`: Possible options: `single` (default), `multi`
+- `--verbose`
 
 ## Author
 

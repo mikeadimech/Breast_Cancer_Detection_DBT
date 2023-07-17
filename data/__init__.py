@@ -3,10 +3,10 @@ from data.dataset import BreastScanDataset
 
 def read_dataset(dataset_path):
     df = pd.read_csv(dataset_path+'data_csv/train-v2_table_list_slice.csv')
-    df.drop(df.tail(16500).index, axis=0, inplace=True)
+    # df.drop(df.tail(16500).index, axis=0, inplace=True)
     return df
 
-def preprocess_dataset(df, dataset_path):
+def preprocess_dataset(df, dataset_path, n_augment, batch_size):
     # Define transformations
     transform = transforms.Compose([
         transforms.Resize((224, 224), antialias=True),  # Resize images to fit ResNet input size
@@ -40,11 +40,6 @@ def preprocess_dataset(df, dataset_path):
     train_data = df[df['StudyUID'].isin(train_studies['StudyUID'])]
     test_data = df[df['StudyUID'].isin(test_studies['StudyUID'])]
 
-    
-
-    # Number of random combinations to generate
-    n_augment = 3
-
     # Generate n_augment random combinations of augmentations
     random_combinations = []
     for _ in range(n_augment):
@@ -76,7 +71,6 @@ def preprocess_dataset(df, dataset_path):
     test_dataset = BreastScanDataset(test_data, dataset_path, transform)
 
     # Create data loaders
-    batch_size = 128
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     

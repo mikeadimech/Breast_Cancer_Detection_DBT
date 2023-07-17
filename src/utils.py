@@ -6,6 +6,7 @@ import torch.nn as nn
 import torchvision
 from torchvision import transforms, models
 from torch.utils.data import Dataset, DataLoader
+from torchinfo import summary
 from PIL import Image
 from tqdm import tqdm
 from sklearn.metrics import classification_report, accuracy_score, balanced_accuracy_score, precision_score, \
@@ -22,6 +23,14 @@ import torch.optim as optim
 import itertools
 import argparse
 import wandb
+import csv
+from datetime import datetime
+
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
 
 def parse_arguments():
 # Define the accepted values for the arguments
@@ -33,6 +42,7 @@ def parse_arguments():
     parser.add_argument('--model', choices=VALID_MODELS, default='ResNet')
     parser.add_argument('--transferlearning', choices=VALID_TRANSFER_LEARNING, default='single')
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--trials', type=check_positive, default=0)
 
     # Parse the arguments
     args = parser.parse_args()
@@ -41,8 +51,9 @@ def parse_arguments():
     model_name = args.model
     transfer_learning = args.transferlearning
     verbose = args.verbose
+    num_trials = args.trials
 
-    return model_name, transfer_learning, verbose
+    return model_name, transfer_learning, verbose, num_trials
 
 def plot_confusion_matrix(y_true, y_pred, unique_labels, path, name):
     
@@ -71,8 +82,8 @@ def plot_loss(epochs, train_losses, val_losses, path, name):
     })
 
     # Plot the training and validation loss
-    sns.lineplot(data=loss_df, x='Epoch', y='Training Loss', ci=None)
-    sns.lineplot(data=loss_df, x='Epoch', y='Validation Loss', ci=None)
+    sns.lineplot(data=loss_df, x='Epoch', y='Training Loss', errorbar=None)
+    sns.lineplot(data=loss_df, x='Epoch', y='Validation Loss',errorbar=None)
     plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
     
     plt.savefig(path+name+'_Training_Loss.png')
@@ -89,7 +100,7 @@ def plot_roc_auc(epochs, roc_auc_scores, path, name):
         'ROC_AUC': roc_auc_scores
     })
 
-    sns.lineplot(data=loss_df, x='Epoch', y='ROC_AUC', ci=None)
+    sns.lineplot(data=loss_df, x='Epoch', y='ROC_AUC',errorbar=None)
     plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
 
     plt.savefig(path+name+'_ROC_AUC.png')
@@ -115,7 +126,28 @@ def plot_roc_curve(y_true, y_score, num_classes, class_labels, path, name):
     plt.title('Receiver Operating Characteristic: '+name)
     plt.legend(loc="lower right")
 
-    plt.savefig(path+name+'_ROC_Curve.png')
+    plt.savefig(path+name+'_ROC_Curve.png')\
+    
+def save_parameters_to_csv(filepath, parameters, name):
+    # Check if the file exists
+    file_exists = os.path.exists(filepath)
+
+    # Open the file in append mode
+    with open(filepath, 'a', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=['Date', 'Time', 'Model_Name'] + list(parameters.keys()))
+
+        # Write headers if the file is newly created
+        if not file_exists:
+            writer.writeheader()
+
+        # Get current date and time
+        now = datetime.now()
+        current_date = now.strftime('%d-%m-%Y')
+        current_time = now.strftime('%H:%M:%S')
+
+        # Append a new entry with date, time, and parameter values
+        parameters_with_datetime = {'Date': current_date, 'Time': current_time, 'Model_Name':name, **parameters}
+        writer.writerow(parameters_with_datetime)
 
 import sys
 import os
