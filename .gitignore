@@ -1,6 +1,7 @@
 .Trash-23964
 .ipynb_checkpoints
-*.png
+data/**/*.png
 *.pt
 *.pth
 __pycache__/
+wandb/

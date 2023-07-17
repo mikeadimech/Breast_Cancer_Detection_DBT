@@ -14,3 +14,4 @@ pydicom
 pyjpegls
 pylibjpeg-openjpeg
 pylibjpeg
+wandb

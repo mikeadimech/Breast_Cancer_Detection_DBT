@@ -1,8 +1,7 @@
 # Breast Cancer Detection via Digital Breast Tomosynthesis
 
-by Mikea Dimech
-
-University of St Andrews
+by [Mikea Dimech](dimech.ai)<br>
+*University of St Andrews*
 
 - [Breast Cancer Detection via Digital Breast Tomosynthesis](#breast-cancer-detection-via-digital-breast-tomosynthesis)
   - [Getting Started](#getting-started)
@@ -26,18 +25,22 @@ These instructions will guide you on how to set up and run the project on your l
 
 1. Clone the repository:
 
-  ```git clone https://github.com/your-username/project-name.git```
+  ```
+  git clone https://github.com/your-username/project-name.git
+  ```
 
 2. Navigate to the project directory:
-
    
-   ```cd project-name```
+   ```
+   cd project-name
+   ```
    
 
 3. Install the required dependencies:
 
-  
-   ```pip install -r requirements.txt```
+   ```
+   pip install -r requirements.txt
+   ```
    
 
 ### Usage
@@ -46,8 +49,9 @@ Instructions on how to use or run the code go here.
 
 Example command to run the main script:
 
-
-```python src/main.py --model Swin --transferlearning single```
+```
+python src/main.py --model Swin --transferlearning single
+```
 
 Replace `Swin` and `single` with your desired values for the following arguments:
 
