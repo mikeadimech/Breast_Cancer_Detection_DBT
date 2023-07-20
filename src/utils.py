@@ -16,7 +16,6 @@ from sklearn.metrics import roc_auc_score
 import seaborn as sns
 import matplotlib.pyplot as plt
 from  matplotlib.ticker import FuncFormatter
-import numpy as np
 import time
 import random
 import torch.optim as optim
@@ -33,27 +32,21 @@ def check_positive(value):
     return ivalue
 
 def parse_arguments():
-# Define the accepted values for the arguments
     VALID_MODELS = ['Swin', 'ViT', 'ResNet', 'ConvNeXt']
-    VALID_TRANSFER_LEARNING = ['single', 'multi']
 
     # Create an ArgumentParser object and define the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', choices=VALID_MODELS, default='ResNet')
-    parser.add_argument('--transferlearning', choices=VALID_TRANSFER_LEARNING, default='single')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--trials', type=check_positive, default=0)
 
-    # Parse the arguments
     args = parser.parse_args()
 
-    # Save the arguments as variables
     model_name = args.model
-    transfer_learning = args.transferlearning
     verbose = args.verbose
     num_trials = args.trials
 
-    return model_name, transfer_learning, verbose, num_trials
+    return model_name, verbose, num_trials
 
 def plot_confusion_matrix(y_true, y_pred, unique_labels, path, name):
     
@@ -84,7 +77,7 @@ def plot_loss(epochs, train_losses, val_losses, path, name):
     # Plot the training and validation loss
     sns.lineplot(data=loss_df, x='Epoch', y='Training Loss', errorbar=None)
     sns.lineplot(data=loss_df, x='Epoch', y='Validation Loss',errorbar=None)
-    plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
+    # plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
     
     plt.savefig(path+name+'_Training_Loss.png')
 
@@ -101,7 +94,7 @@ def plot_roc_auc(epochs, roc_auc_scores, path, name):
     })
 
     sns.lineplot(data=loss_df, x='Epoch', y='ROC_AUC',errorbar=None)
-    plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
+    # plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
 
     plt.savefig(path+name+'_ROC_AUC.png')
 

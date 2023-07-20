@@ -5,3 +5,4 @@ data/**/*.png
 *.pth
 __pycache__/
 wandb/
+ht_fig/
