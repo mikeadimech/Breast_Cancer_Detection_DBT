@@ -59,7 +59,7 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
 
         num_classes = 4
 
-        model, hyperparameters, num_epochs, batch_size, img_size, n_freeze = load_model(model_name, num_classes, n_layers_to_freeze=n_freeze)
+        model, _, _, _, img_size, _ = load_model(model_name, num_classes, n_layers_to_freeze=n_freeze)
 
         train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size)
     
