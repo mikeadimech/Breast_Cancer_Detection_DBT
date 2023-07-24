@@ -1,54 +1,63 @@
 from utils import *
 
-def load_model(model_name, num_classes, from_path=None):
+def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
     if model_name=="ResNet":
+        num_epochs = 2
+        batch_size = 32
+        img_size = 224
+        n_layers_to_freeze = 1
         model = load_resnet50_model(num_classes, from_path)
-        model = freeze_layers(model, 8)
+        model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
             'beta2': 0.999,
             'weight_decay': 0.0001
         }
-        num_epochs = 2
-        batch_size = 32
     elif model_name=="ConvNeXt":
-        model = load_convnext_model(num_classes, from_path)
-        model = freeze_layers(model, 1)
-        hyperparameters = {
-            'learning_rate': 0.001,
-            'beta1': 0.9,
-            'beta2': 0.999,
-            'weight_decay': 0.0001
-        }
         num_epochs = 2
         batch_size = 32
+        img_size = 518
+        n_layers_to_freeze = 1
+        model = load_convnext_model(num_classes, from_path)
+        model = freeze_layers(model, n_layers_to_freeze)
+        hyperparameters = {
+            'learning_rate': 0.001,
+            'beta1': 0.9,
+            'beta2': 0.999,
+            'weight_decay': 0.0001
+        }
     elif model_name=="ViT":
+        num_epochs = 3
+        batch_size = 16
+        img_size = 384 #fixed
+        n_layers_to_freeze = 1
         model = load_vit_model(num_classes, from_path)
-        model = freeze_layers(model, 8)
+        model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
             'beta2': 0.999,
             'weight_decay': 0.0001
         }
-        num_epochs = 2
-        batch_size = 8
+        
     elif model_name=="Swin":
+        num_epochs = 4
+        batch_size = 64
+        img_size = 518
+        n_layers_to_freeze = 4
         model = load_swin_model(num_classes, from_path)
-        model = freeze_layers(model, 5)
+        model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
             'beta2': 0.999,
             'weight_decay': 0.0001
         }
-        num_epochs = 2
-        batch_size = 64
     else:
         raise Exception("Invalid model name.")
 
-    return model, hyperparameters, num_epochs, batch_size
+    return model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze
 
 def load_resnet50_model(num_classes, saved_weights_path=None):
     # Load the pretrained model
@@ -84,7 +93,7 @@ def load_convnext_model(num_classes, saved_weights_path=None):
 
 def load_vit_model(num_classes, saved_weights_path=None):
     # Load the pretrained model
-    model = models.vit_h_14(weights='DEFAULT')
+    model = models.vit_b_16(weights=torchvision.models.ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1)
 
     print(model)
     
@@ -146,7 +155,7 @@ def get_loss_optimizer(model, hyperparameters, class_counts, device):
 
 
 def train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
-                    unique_labels, device, num_epochs, batch_size, n_augment, model_name, save_weights=None, \
+                    unique_labels, device, num_epochs, batch_size, n_augment, n_freeze, model_name, save_weights=None, \
                     save_fig=None, evaluate=True):
     
     # log training process
@@ -157,7 +166,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
             "learning_rate": optimizer.param_groups[-1]['lr'],
             "epochs": num_epochs,
             "batch_size:": batch_size,
-            "n_augment": n_augment
+            "n_augment": n_augment,
+            "n_augment": n_freeze
         }
     )
     
@@ -166,16 +176,22 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
     train_losses = []
     val_losses = []
     epochs = []
-    roc_auc_scores = []
-    balanced_accuracy_scores= []
+    train_roc_auc_scores = []
+    val_roc_auc_scores = []
+    train_balanced_accuracy_scores = []
+    val_balanced_accuracy_scores = []
 
     # set timer
     start_time = time.time()
 
     # Train the model
     model.train()
+    
     for epoch in range(num_epochs):
         running_loss = 0.0
+        all_train_preds = []
+        all_train_labels = []
+        all_train_probs = []
         for inputs, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}, Training"):
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -191,10 +207,27 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
             running_loss += loss.item() * inputs.size(0)
 
+            # Compute predictions, probabilities, and collect labels for ROC AUC and balanced accuracy
+            _, train_preds = torch.max(outputs, 1)
+            train_probs = torch.nn.functional.softmax(outputs, dim=1)
+            all_train_preds.extend(train_preds.cpu().numpy())
+            all_train_labels.extend(labels.cpu().numpy())
+            all_train_probs.append(train_probs.detach().cpu().numpy())
+
+        all_train_probs = np.vstack(all_train_probs)  # Stack the probabilities
+
         train_epoch_loss = running_loss / len(train_loader.dataset)
-        print(f'Train Loss: {train_epoch_loss:.4f}')
         train_losses.append(train_epoch_loss)
         epochs.append(epoch)
+
+        # Compute ROC AUC and balanced accuracy for the training set
+        train_roc_auc = roc_auc_score(all_train_labels, all_train_probs, average='macro', multi_class='ovr')
+        train_roc_auc_scores.append(train_roc_auc)
+        
+        train_bal_acc = balanced_accuracy_score(all_train_labels, all_train_preds)
+        train_balanced_accuracy_scores.append(train_bal_acc)
+
+        print(f'Train Loss: {train_epoch_loss:.4f}  |  Train ROC AUC: {train_roc_auc:.4f}  |  Train Balanced Accuracy: {train_bal_acc:.4f}')
 
         # Validation
         model.eval()
@@ -221,15 +254,15 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
         val_epoch_loss = running_loss / len(val_loader.dataset)
         val_losses.append(val_epoch_loss)
 
-        roc_auc = roc_auc_score(all_labels, all_probs, average='macro', multi_class='ovr')
-        roc_auc_scores.append(roc_auc)
+        val_roc_auc = roc_auc_score(all_labels, all_probs, average='macro', multi_class='ovr')
+        val_roc_auc_scores.append(val_roc_auc)
 
-        bal_acc = balanced_accuracy_score(all_labels, all_preds)
-        balanced_accuracy_scores.append(bal_acc)
+        val_bal_acc = balanced_accuracy_score(all_labels, all_preds)
+        val_balanced_accuracy_scores.append(val_bal_acc)
 
-        print(f'Validation Loss: {val_epoch_loss:.4f}  |  ROC AUC: {roc_auc:.4f}  |  Balanced Accuracy: {bal_acc:.4f}')
+        print(f'Validation Loss: {val_epoch_loss:.4f}  |  Validation ROC AUC: {val_roc_auc:.4f}  |  Validation Balanced Accuracy: {val_bal_acc:.4f}')
 
-        wandb.log({"train_loss": train_epoch_loss, "val_loss": val_epoch_loss, "roc_auc":roc_auc, "balanced_accuracy":bal_acc})
+        wandb.log({"train_loss":train_epoch_loss, "val_loss":val_epoch_loss, "roc_auc_train":train_roc_auc, "roc_auc_val":val_roc_auc, "balanced_accuracy_train":train_bal_acc, "balanced_accuracy_val":val_bal_acc})
     
     end_time = time.time()
     seconds = end_time - start_time
@@ -245,7 +278,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
     # plot loss
     if save_fig is not None:
         plot_loss(epochs, train_losses, val_losses, save_fig, model_name)
-        plot_roc_auc(epochs, roc_auc_scores, save_fig, model_name)
+        plot_roc_auc(epochs, train_roc_auc_scores, val_roc_auc_scores, save_fig, model_name)
+        plot_bal_acc(epochs, train_balanced_accuracy_scores, val_balanced_accuracy_scores, save_fig, model_name)
 
     if evaluate==True:
         metrics = evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig)

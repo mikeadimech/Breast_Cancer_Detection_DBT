@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision
 from torchvision import transforms, models
+import torchvision.transforms.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchinfo import summary
 from PIL import Image
@@ -63,40 +64,53 @@ def plot_confusion_matrix(y_true, y_pred, unique_labels, path, name):
 def plot_loss(epochs, train_losses, val_losses, path, name):
     
     plt.figure(figsize=(9,7),dpi=150)
-    plt.xlabel("Epochs")
+    plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.title("Error Loss per Epoch: "+name)
 
-    # Create a DataFrame from the lists
     loss_df = pd.DataFrame({
-        'Epoch': epochs,
         'Training Loss': train_losses,
         'Validation Loss': val_losses
     })
 
     # Plot the training and validation loss
-    sns.lineplot(data=loss_df, x='Epoch', y='Training Loss', errorbar=None)
-    sns.lineplot(data=loss_df, x='Epoch', y='Validation Loss',errorbar=None)
-    # plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
+    sns.lineplot(data=loss_df, dashes=False, errorbar=None)
     
+    plt.legend()    
     plt.savefig(path+name+'_Training_Loss.png')
 
-def plot_roc_auc(epochs, roc_auc_scores, path, name):
+def plot_roc_auc(epochs, train_roc_auc_scores, val_roc_auc_scores, path, name):
     plt.figure(figsize=(9,7),dpi=150)
-    plt.xlabel("Epochs")
+    plt.xlabel("Epoch")
     plt.ylabel("ROC AUC")
     plt.title("ROC AUC per Epoch: "+name)
 
-    # Create a DataFrame from the lists
-    loss_df = pd.DataFrame({
-        'Epoch': epochs,
-        'ROC_AUC': roc_auc_scores
+    roc_auc_df = pd.DataFrame({
+        'Training': train_roc_auc_scores,
+        'Validation': val_roc_auc_scores
     })
 
-    sns.lineplot(data=loss_df, x='Epoch', y='ROC_AUC',errorbar=None)
-    # plt.gca().xaxis.set_major_formatter(FuncFormatter(lambda x, _: int(x)))
+    sns.lineplot(data=roc_auc_df, dashes=False, errorbar=None)
 
+    plt.legend() 
     plt.savefig(path+name+'_ROC_AUC.png')
+
+def plot_bal_acc(epochs, train_bal_acc_scores, val_bal_acc_scores, path, name):
+    plt.figure(figsize=(9,7),dpi=150)
+    plt.xlabel("Epoch")
+    plt.ylabel("Balanced Accuracy")
+    plt.title("Balanced Accuracy per Epoch: "+name)
+
+    # Create a DataFrame from the lists
+    acc_df = pd.DataFrame({
+        'Training': train_bal_acc_scores,
+        'Validation': val_bal_acc_scores
+    })
+
+    sns.lineplot(data=acc_df, dashes=False, errorbar=None)
+
+    plt.legend() 
+    plt.savefig(path+name+'_Balanced_Accuracy.png')
 
 def plot_roc_curve(y_true, y_score, num_classes, class_labels, path, name):
     # Compute ROC curve and ROC area for each class
@@ -108,18 +122,19 @@ def plot_roc_curve(y_true, y_score, num_classes, class_labels, path, name):
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     # Plot the ROC curve
-    plt.figure(figsize=(9,7),dpi=150)
-    for i in range(num_classes):
-        plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'.format(class_labels[i], roc_auc[i]))
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic: '+name)
-    plt.legend(loc="lower right")
+    with sns.axes_style("white"):
+        plt.figure(figsize=(9,7),dpi=150)
+        for i in range(num_classes):
+            plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'.format(class_labels[i], roc_auc[i]))
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver Operating Characteristic: '+name)
+        plt.legend(loc="lower right")
 
-    plt.savefig(path+name+'_ROC_Curve.png')\
+        plt.savefig(path+name+'_ROC_Curve.png')\
     
 def save_parameters_to_csv(filepath, parameters, name):
     # Check if the file exists
@@ -148,3 +163,4 @@ here = os.path.dirname(__file__)
 sys.path.append(os.path.join(here, '..'))
 from data import *
 from train import *
+sns.set_theme()

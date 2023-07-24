@@ -6,3 +6,4 @@ data/**/*.png
 __pycache__/
 wandb/
 ht_fig/
+models/hyperparameters.csv

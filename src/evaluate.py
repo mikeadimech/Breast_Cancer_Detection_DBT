@@ -13,11 +13,11 @@ def main():
     num_classes = 4
     batch_size = 128
 
-    model, hyperparameters, num_epochs, batch_size = load_model(model_name, num_classes)
+    model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes)
     model.to(device)
     
     
-    train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size)
+    train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size)
 
     unique_labels = df.columns.values[3:]
 

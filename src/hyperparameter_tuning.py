@@ -5,15 +5,27 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
     dataset_path ='/data/md311/Breast_Cancer_Detection_DBT/data/' 
     df = read_dataset(dataset_path)
 
+    # Initialise Random Values
     learning_rates = [10**(-random.uniform(3, 5)) for _ in range(num_trials)]
     beta1_values = [random.uniform(0, 1) for _ in range(num_trials)]
     beta2_values = [random.uniform(0, 1) for _ in range(num_trials)]
     weight_decays = [10**(-random.uniform(3, 5)) for _ in range(num_trials)]
     batch_sizes = [2**random.randint(5, 7) for _ in range(num_trials)]
     n_augment_values = [random.randint(0, 14) for _ in range(num_trials)]
+    if model_name=="ConvNeXt":
+        n_freeze_values = [random.randint(0, 2) for _ in range(num_trials)]
+    elif model_name=="ViT":
+        n_freeze_values = [random.randint(0, 3) for _ in range(num_trials)]
+    elif model_name=="Swin":
+        n_freeze_values = [random.randint(0, 5) for _ in range(num_trials)]
+    else:
+        raise Exception("Error: Invalid model name.")
+    # n layers to freeze
+    # swin 0-5
+    # vit 0-3
+    # convnext 0-2
 
-    num_epochs = 5
-    n_splits = 7
+    num_epochs = 10
 
     best_auc = 0
     best_params = {}
@@ -26,6 +38,7 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
         weight_decay = weight_decays[trial]
         batch_size = batch_sizes[trial]
         n_augment = n_augment_values[trial]
+        n_freeze = n_freeze_values[trial]
 
         print(f"\n________________________\nTRIAL {trial}/{num_trials}\n")
 
@@ -34,7 +47,8 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
         print(f"Beta2: {beta2}")
         print(f"Weight Decay: {weight_decay}")
         print(f"Batch Size: {batch_size}")
-        print(f"n_augment: {n_augment}\n")
+        print(f"n_augment: {n_augment}")
+        print(f"n_freeze: {n_freeze}\n")
 
         hyperparameters = {
             'learning_rate': learning_rate,
@@ -45,9 +59,9 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
 
         num_classes = 4
 
-        model, hyperparameters, num_epochs, batch_size = load_model(model_name, num_classes)
+        model, hyperparameters, num_epochs, batch_size, img_size, n_freeze = load_model(model_name, num_classes, n_layers_to_freeze=n_freeze)
 
-        train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size)
+        train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size)
     
         unique_labels = df.columns.values[3:]
 
@@ -55,17 +69,19 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
 
         criterion, optimizer = get_loss_optimizer(model, hyperparameters, class_counts, device)
 
-        save_fig_path = '/data/md311/Breast_Cancer_Detection_DBT/fig/test_{date:%d-%m-%Y_%H:%M:%S}_'.format(date=datetime.datetime.now())
-        
-        # metrics = train_model_cv(model, criterion, optimizer, train_dataset, train_loader, test_loader, unique_labels, \
-        #             device, num_epochs, batch_size, n_splits, n_augment, model_name, save_weights=None, save_fig=save_fig_path, evaluate=True)
+        save_fig_path = '/data/md311/Breast_Cancer_Detection_DBT/ht_fig/test_{date:%d-%m-%Y_%H:%M:%S}_'.format(date=datetime.now())
 
         metrics = train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
-                    unique_labels, device, num_epochs, batch_size, n_augment, model_name, save_weights=None, \
+                    unique_labels, device, num_epochs, batch_size, n_augment, n_freeze, model_name, save_weights=None, \
                     save_fig=save_fig_path, evaluate=True)
 
+        hyperparameters.update({
+            "batch_size": batch_size,
+            "n_augment": n_augment,
+            "n_freeze": n_freeze
+        })
         hyperparameters.update(metrics)
-
+        
         save_csv_path = '/data/md311/Breast_Cancer_Detection_DBT/models/hyperparameters.csv'
         save_parameters_to_csv(save_csv_path, hyperparameters, model_name)
 
