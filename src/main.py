@@ -1,6 +1,5 @@
 from utils import *
-
-    
+ 
 def fine_tuning(model_name, verbose, device):
     # Read dataset
     dataset_path ='/data/md311/Breast_Cancer_Detection_DBT/data/' 
@@ -9,7 +8,7 @@ def fine_tuning(model_name, verbose, device):
     n_augment = 2
     num_classes = 4
 
-    model, hyperparameters, num_epochs, n_splits, batch_size = load_model(model_name, num_classes)
+    model, hyperparameters, num_epochs, batch_size = load_model(model_name, num_classes)
 
     train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size)
     
@@ -38,7 +37,7 @@ def fine_tuning(model_name, verbose, device):
                 #     save_fig_path, evaluate=True) 
     
     train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
-                    unique_labels, device, num_epochs, model_name, save_weights=save_weights_path, \
+                    unique_labels, device, num_epochs, batch_size, n_augment, model_name, save_weights=save_weights_path, \
                     save_fig=save_fig_path, evaluate=True)
     
 def main():

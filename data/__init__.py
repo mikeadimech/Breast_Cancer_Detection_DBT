@@ -6,6 +6,12 @@ def read_dataset(dataset_path):
     df.drop(df.tail(16500).index, axis=0, inplace=True)
     return df
 
+def mean_std(loader):
+    images, labels = next(iter(loader))
+    # shape of images = [b,c,w,h]
+    mean, std = images.mean([0,2,3]), images.std([0,2,3])
+    return mean, std
+
 def preprocess_dataset(df, dataset_path, n_augment, batch_size):
 
     # Define transformations
@@ -15,17 +21,21 @@ def preprocess_dataset(df, dataset_path, n_augment, batch_size):
         # transforms.Grayscale(num_output_channels=1),  # Convert images to grayscale
         transforms.ToTensor(),  # Convert PIL image to PyTorch tensor
         # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize to ImageNet mean and std
+        transforms.Normalize(mean=[0.3283, 0.3283, 0.3283], std=[0.4667, 0.4667, 0.4667])  # Normalize to dataset mean and std
+
     ])
 
     # Define the list of possible augmentations
     augmentations_list = [
         transforms.RandomRotation(10),
-        # transforms.RandomResizedCrop(224, scale=(0.8, 1.0), antialias=True),
-        transforms.RandomResizedCrop(518, scale=(0.8, 1.0), antialias=True),
+        # transforms.RandomResizedCrop(518, scale=(0.8, 1.0), antialias=True),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.GaussianBlur(3, sigma=(0.1, 2.0))
+
+        # NO
+        # transforms.RandomResizedCrop(224, scale=(0.8, 1.0), antialias=True),
         # transforms.RandomHorizontalFlip(),
         # transforms.RandomVerticalFlip(),
-        transforms.GaussianBlur(3, sigma=(0.1, 2.0))
     ]
 
     # Split the data into train, validation and test sets
@@ -36,6 +46,9 @@ def preprocess_dataset(df, dataset_path, n_augment, batch_size):
 
     # Create data loaders for training, validation and testing
     train_loader, val_loader, test_loader = create_data_loaders(train_dataset, val_dataset, test_dataset, batch_size)
+
+    mean, std = mean_std(train_loader)
+    print("mean and std: \n", mean, std)
 
     # Print the class distribution before and after augmentation
     print_class_distribution(train_data, n_augment)

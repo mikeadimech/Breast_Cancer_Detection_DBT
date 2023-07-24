@@ -36,14 +36,6 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
         print(f"Batch Size: {batch_size}")
         print(f"n_augment: {n_augment}\n")
 
-        train_loader, test_loader, train_dataset, _ = preprocess_dataset(df, dataset_path, n_augment, batch_size)
-    
-        unique_labels = df.columns.values[3:]
-        num_classes = len(unique_labels)
-    
-        # load model
-        model, _, _, _, _ = load_model_single(model_name, num_classes)
-
         hyperparameters = {
             'learning_rate': learning_rate,
             'beta1': beta1,
@@ -51,12 +43,26 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
             'weight_decay': weight_decay
         }
 
-        criterion, optimizer = get_loss_optimizer(model, hyperparameters)
+        num_classes = 4
+
+        model, hyperparameters, num_epochs, batch_size = load_model(model_name, num_classes)
+
+        train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size)
+    
+        unique_labels = df.columns.values[3:]
+
+        # load model
+
+        criterion, optimizer = get_loss_optimizer(model, hyperparameters, class_counts, device)
 
         save_fig_path = '/data/md311/Breast_Cancer_Detection_DBT/fig/test_{date:%d-%m-%Y_%H:%M:%S}_'.format(date=datetime.datetime.now())
         
-        metrics = train_model_cv(model, criterion, optimizer, train_dataset, train_loader, test_loader, unique_labels, \
-                    device, num_epochs, batch_size, n_splits, n_augment, model_name, save_weights=None, save_fig=save_fig_path, evaluate=True)
+        # metrics = train_model_cv(model, criterion, optimizer, train_dataset, train_loader, test_loader, unique_labels, \
+        #             device, num_epochs, batch_size, n_splits, n_augment, model_name, save_weights=None, save_fig=save_fig_path, evaluate=True)
+
+        metrics = train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
+                    unique_labels, device, num_epochs, batch_size, n_augment, model_name, save_weights=None, \
+                    save_fig=save_fig_path, evaluate=True)
 
         hyperparameters.update(metrics)
 

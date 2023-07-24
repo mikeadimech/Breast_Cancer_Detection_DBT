@@ -11,7 +11,6 @@ def load_model(model_name, num_classes, from_path=None):
             'weight_decay': 0.0001
         }
         num_epochs = 2
-        n_splits = 2
         batch_size = 32
     elif model_name=="ConvNeXt":
         model = load_convnext_model(num_classes, from_path)
@@ -23,7 +22,6 @@ def load_model(model_name, num_classes, from_path=None):
             'weight_decay': 0.0001
         }
         num_epochs = 2
-        n_splits = 2
         batch_size = 32
     elif model_name=="ViT":
         model = load_vit_model(num_classes, from_path)
@@ -35,24 +33,22 @@ def load_model(model_name, num_classes, from_path=None):
             'weight_decay': 0.0001
         }
         num_epochs = 2
-        n_splits = 2
         batch_size = 8
     elif model_name=="Swin":
         model = load_swin_model(num_classes, from_path)
-        model = freeze_layers(model, 1)
+        model = freeze_layers(model, 5)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
             'beta2': 0.999,
             'weight_decay': 0.0001
         }
-        num_epochs = 5
-        n_splits = 2
+        num_epochs = 2
         batch_size = 64
     else:
         raise Exception("Invalid model name.")
 
-    return model, hyperparameters, num_epochs, n_splits, batch_size
+    return model, hyperparameters, num_epochs, batch_size
 
 def load_resnet50_model(num_classes, saved_weights_path=None):
     # Load the pretrained model
@@ -150,7 +146,7 @@ def get_loss_optimizer(model, hyperparameters, class_counts, device):
 
 
 def train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
-                    unique_labels, device, num_epochs, model_name, save_weights=None, \
+                    unique_labels, device, num_epochs, batch_size, n_augment, model_name, save_weights=None, \
                     save_fig=None, evaluate=True):
     
     # log training process
@@ -160,6 +156,8 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
         config={
             "learning_rate": optimizer.param_groups[-1]['lr'],
             "epochs": num_epochs,
+            "batch_size:": batch_size,
+            "n_augment": n_augment
         }
     )
     
@@ -393,6 +391,8 @@ def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, tes
     if evaluate==True:
         metrics = evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig)
         wandb.log(metrics)
+        
+
     else:
         metrics = {}
 
@@ -449,5 +449,11 @@ def evaluate_model(model, test_loader, device, unique_labels, model_name, save_f
     else:
         conf_mat = pd.DataFrame(confusion_matrix(all_labels,all_preds), index=unique_labels, columns=unique_labels)
         print('\nConfusion Matrix:\n',conf_mat,'\n',sep='')
+    
+    if wandb.run is not None:
+        wandb.log({"conf_mat" : wandb.plot.confusion_matrix(probs=None,
+                        y_true=all_labels, preds=all_preds,
+                        class_names=unique_labels)})
+
 
     return metrics
