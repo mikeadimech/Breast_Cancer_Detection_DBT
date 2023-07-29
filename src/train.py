@@ -16,16 +16,17 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
         }
     elif model_name=="ConvNeXt":
         num_epochs = 2
-        batch_size = 32
-        img_size = 518
+        batch_size = 1
+        img_size = 1200
         n_layers_to_freeze = 1
-        model = load_convnext_model(num_classes, from_path)
-        model = freeze_layers(model, n_layers_to_freeze)
+        # model = load_convnext_model(num_classes, from_path)
+        # model = freeze_layers(model, n_layers_to_freeze)
+        model = timm.create_model('convnextv2_large', pretrained=False, num_classes=4)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
             'beta2': 0.999,
-            'weight_decay': 0.0001
+            'weight_decay': 0.1
         }
     elif model_name=="ViT":
         num_epochs = 3
@@ -42,17 +43,17 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
         }
         
     elif model_name=="Swin":
-        num_epochs = 4
-        batch_size = 64
-        img_size = 518
-        n_layers_to_freeze = 4
+        num_epochs = 6
+        batch_size = 8
+        img_size = 1200
+        n_layers_to_freeze = 1
         model = load_swin_model(num_classes, from_path)
         model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
-            'learning_rate': 0.001,
+            'learning_rate': 0.0005,
             'beta1': 0.9,
             'beta2': 0.999,
-            'weight_decay': 0.0001
+            'weight_decay': 0.1
         }
     else:
         raise Exception("Invalid model name.")
@@ -111,9 +112,12 @@ def load_vit_model(num_classes, saved_weights_path=None):
 
 def load_swin_model(num_classes, saved_weights_path=None):
     # Load the pretrained model
-    model = models.swin_v2_b(weights='DEFAULT')
+    # model = models.swin_v2_b(weights='DEFAULT')
 
-    print(model)
+    # Load not pre trained model
+    model = models.swin_v2_b(weights=None)
+
+    # print(model)
     
     # Get the number of input features to the last layer
     num_ftrs = model.head.in_features
@@ -167,7 +171,7 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
             "epochs": num_epochs,
             "batch_size:": batch_size,
             "n_augment": n_augment,
-            "n_augment": n_freeze
+            "n_freeze": n_freeze
         }
     )
     

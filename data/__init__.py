@@ -52,7 +52,7 @@ class RandomNoise:
 
 def read_dataset(dataset_path):
     df = pd.read_csv(dataset_path+'data_csv/train-v2_table_list_slice.csv')
-    # df.drop(df.tail(16500).index, axis=0, inplace=True)
+    df.drop(df.tail(16500).index, axis=0, inplace=True)
     return df
 
 def mean_std(loader):
@@ -86,7 +86,7 @@ def plot_augmentations(image_path, augment_list, transform, save_path):
 
     # image = image.resize((512,512))
 
-    fig = plt.figure(figsize=(2+(2*len(augment_list)), 4), dpi=200)
+    fig = plt.figure(figsize=(2+(2*len(augment_list)), 3), dpi=250)
 
     # Add the original image to the figure
     ax = fig.add_subplot(1, len(augment_list) + 1, 1)
@@ -94,20 +94,6 @@ def plot_augmentations(image_path, augment_list, transform, save_path):
 
     ax.set_title('Original')
     ax.axis('off')
-
-    n = np.array(image) 
-    print(n.max(),n.mean())
-
-    print(n.shape)
-    # print(n)
-
-    colors, counts = np.unique(n.reshape(-1, 3), 
-                           return_counts = True, 
-                           axis = 0)
-
-    # for a, b in zip(colors, counts):
-    #     if b>500:
-    #         print(a,b)
 
     # Apply each transformation and add the result to the figure
     for i, transform in enumerate(augment_list, start=2):

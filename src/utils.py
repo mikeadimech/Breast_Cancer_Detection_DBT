@@ -25,6 +25,7 @@ import argparse
 import wandb
 import csv
 from datetime import datetime
+import timm
 
 def check_positive(value):
     ivalue = int(value)
@@ -164,3 +165,6 @@ sys.path.append(os.path.join(here, '..'))
 from data import *
 from train import *
 sns.set_theme()
+
+import gc
+gc.collect()
