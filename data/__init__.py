@@ -52,14 +52,8 @@ class RandomNoise:
 
 def read_dataset(dataset_path):
     df = pd.read_csv(dataset_path+'data_csv/train-v2_table_list_slice.csv')
-    df.drop(df.tail(16500).index, axis=0, inplace=True)
+    # df.drop(df.tail(16500).index, axis=0, inplace=True)
     return df
-
-def mean_std(loader):
-    images, labels = next(iter(loader))
-    # shape of images = [b,c,w,h]
-    mean, std = images.mean([0,2,3]), images.std([0,2,3])
-    return mean, std
 
 def plot_augmentations(image_path, augment_list, transform, save_path):
     # Open the image file
@@ -127,23 +121,19 @@ def preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size, savefi
 
     # Define transformations
     transform = transforms.Compose([
-        # transforms.Resize((224, 224), antialias=True),  # Resize images to fit ResNet input size
         transforms.Resize((img_size, img_size), antialias=True), 
-        # transforms.Grayscale(num_output_channels=1),  # Convert images to grayscale
         transforms.ToTensor(),  # Convert PIL image to PyTorch tensor
         # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize to ImageNet mean and std
-        # transforms.Normalize(mean=[0.3283, 0.3283, 0.3283], std=[0.4667, 0.4667, 0.4667])  # Normalize to dataset mean and std
-
+        transforms.Normalize(mean=[0.0824, 0.0824, 0.0824], std=[0.1355, 0.1355, 0.1355])  # Normalize to DBT dataset mean and std
     ])
 
     # Define the list of possible augmentations
     augmentations_list = [
-        
         transforms.RandomRotation(10),
         transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5)),
         RandomZoom(min_scale=1.2, max_scale=1.4),  # Random zoom
         transforms.ColorJitter(contrast=0.2),  # Random contrast
-        RandomNoise(mean=0., std=0.1),  # Random noise
+        RandomNoise(mean=0., std=0.05),  # Random noise
     ]
 
     if savefig is not None:
@@ -159,19 +149,52 @@ def preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size, savefi
     # Create data loaders for training, validation and testing
     train_loader, val_loader, test_loader = create_data_loaders(train_dataset, val_dataset, test_dataset, batch_size)
 
-    # mean, std = mean_std(train_loader)
-    # print("mean and std: \n", mean, std)
+    # mean, std, min_value, max_value = calculate_statistics(train_loader)
+    # print(f"Mean: {mean}, Std: {std}, Min: {min_value}, Max: {max_value}")
+    # Mean: tensor([-0.0004, -0.0004, -0.0004]), Std: tensor([1.0003, 1.0003, 1.0003]), Min: -0.6081181168556213, Max: 6.771955490112305
 
-    # Print the class distribution before and after augmentation
-    # print_class_distribution(train_data, n_augment)
-
-
+    # Print the class distribution 
     class_counts = print_split_distribution(train_data, 'Train', n_augment)
     _ = print_split_distribution(val_data, 'Validation', n_augment)
     _ = print_split_distribution(test_data, 'Test', n_augment)
 
 
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts
+
+def calculate_statistics(dataloader):
+    mean = 0.
+    std = 0.
+    min_value = float('inf')
+    max_value = float('-inf')
+    nb_samples = 0.
+    for data, _ in tqdm(dataloader):
+        batch_samples = data.size(0)  # batch size (the last batch can have smaller size!)
+        data = data.view(batch_samples, data.size(1), -1)  # flatten height and width into one dimension
+        mean += data.mean(2).sum(0)  # sum over the batch dimension
+        std += data.std(2).sum(0)  # sum over the batch dimension
+        min_value = min(min_value, data.min())
+        max_value = max(max_value, data.max())
+        nb_samples += batch_samples
+
+    mean /= nb_samples
+    std /= nb_samples
+    return mean, std, min_value, max_value
+
+def mean_std(loader):
+    mean = 0.
+    std = 0.
+    nb_samples = 0.
+    for data in tqdm(loader):
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
+
+    mean /= nb_samples
+    std /= nb_samples
+
+    return mean, std
 
 def split_data(df, test_size=0.2, val_size=0.2):
     """

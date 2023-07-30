@@ -16,12 +16,12 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
         }
     elif model_name=="ConvNeXt":
         num_epochs = 2
-        batch_size = 1
-        img_size = 1200
+        batch_size = 2
+        img_size = 512
         n_layers_to_freeze = 1
         # model = load_convnext_model(num_classes, from_path)
         # model = freeze_layers(model, n_layers_to_freeze)
-        model = timm.create_model('convnextv2_large', pretrained=False, num_classes=4)
+        model = timm.create_model('convnextv2_huge.fcmae_ft_in22k_in1k_512', pretrained=True, num_classes=4)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
@@ -31,10 +31,11 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
     elif model_name=="ViT":
         num_epochs = 3
         batch_size = 16
-        img_size = 384 #fixed
+        img_size = 512
         n_layers_to_freeze = 1
-        model = load_vit_model(num_classes, from_path)
-        model = freeze_layers(model, n_layers_to_freeze)
+        model = timm.create_model('maxvit_base_tf_512.in21k_ft_in1k', pretrained=True, num_classes=4)
+        # model = load_vit_model(num_classes, from_path)
+        # model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.9,
@@ -44,11 +45,11 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
         
     elif model_name=="Swin":
         num_epochs = 6
-        batch_size = 8
-        img_size = 1200
-        n_layers_to_freeze = 1
+        batch_size = 2
+        img_size = 1024
+        n_layers_to_freeze = 0
         model = load_swin_model(num_classes, from_path)
-        model = freeze_layers(model, n_layers_to_freeze)
+        # model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.0005,
             'beta1': 0.9,
@@ -115,7 +116,7 @@ def load_swin_model(num_classes, saved_weights_path=None):
     # model = models.swin_v2_b(weights='DEFAULT')
 
     # Load not pre trained model
-    model = models.swin_v2_b(weights=None)
+    model = models.swin_v2_s(weights=None)
 
     # print(model)
     

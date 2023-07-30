@@ -9,7 +9,7 @@ def fine_tuning(model_name, verbose, device):
     # Read dataset
     df = read_dataset(dataset_path)
 
-    n_augment = 16
+    n_augment = 14
     num_classes = 4
 
     model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes)
@@ -32,6 +32,15 @@ def fine_tuning(model_name, verbose, device):
         #     col_width=20,
         #     row_settings=["var_names"]
         # )
+    
+    print(f"\nTRAINING\n")
+
+    print(f"Learning Rate: {hyperparameters['learning_rate']}")
+    print(f"Beta1: {hyperparameters['beta1']}")
+    print(f"Beta2: {hyperparameters['beta2']}")
+    print(f"Weight Decay: {hyperparameters['weight_decay']}")
+    print(f"n_augment: {n_augment}")
+    print(f"n_freeze: {n_layers_to_freeze}\n")
 
     criterion, optimizer = get_loss_optimizer(model, hyperparameters, class_counts, device)
     
@@ -73,6 +82,15 @@ def training_from_scratch(model_name, verbose, device):
         )
 
     criterion, optimizer = get_loss_optimizer(model, hyperparameters, class_counts, device)
+
+    print(f"\nTRAINING\n")
+
+    print(f"Learning Rate: {hyperparameters['learning_rate']}")
+    print(f"Beta1: {hyperparameters['beta1']}")
+    print(f"Beta2: {hyperparameters['beta2']}")
+    print(f"Weight Decay: {hyperparameters['weight_decay']}")
+    print(f"n_augment: {n_augment}")
+    print(f"n_freeze: {0}\n")
     
     train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
                     unique_labels, device, num_epochs, batch_size, n_augment, n_layers_to_freeze, model_name, save_weights=save_weights_path, \
@@ -91,9 +109,9 @@ def main():
 
     print("Device",device)
 
-    # fine_tuning(model_name, verbose, device)
+    fine_tuning(model_name, verbose, device)
 
-    training_from_scratch(model_name, verbose, device)
+    # training_from_scratch(model_name, verbose, device)
 
 
 if __name__ == "__main__":
