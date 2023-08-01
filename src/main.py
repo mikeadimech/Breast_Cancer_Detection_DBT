@@ -9,7 +9,7 @@ def fine_tuning(model_name, verbose, device):
     # Read dataset
     df = read_dataset(dataset_path)
 
-    n_augment = 14
+    n_augment = 4
     num_classes = 4
 
     model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes)
@@ -26,12 +26,12 @@ def fine_tuning(model_name, verbose, device):
         print("\nInput image shape:",image.shape,"\n")
 
 
-        # summary(model=model, 
-        #     input_size=(batch_size, image.shape[0], image.shape[1], image.shape[2]),
-        #     col_names=["input_size", "output_size", "num_params", "trainable"],
-        #     col_width=20,
-        #     row_settings=["var_names"]
-        # )
+        summary(model=model, 
+            input_size=(batch_size, image.shape[0], image.shape[1], image.shape[2]),
+            col_names=["input_size", "output_size", "num_params", "trainable"],
+            col_width=20,
+            row_settings=["var_names"]
+        )
     
     print(f"\nTRAINING\n")
 

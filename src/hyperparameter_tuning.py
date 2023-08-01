@@ -13,7 +13,7 @@ def hyperparameter_tuning(model_name, verbose, device, num_trials):
     n_augment_values = [random.randint(0, 14) for _ in range(num_trials)]
     if model_name=="ConvNeXt":
         n_freeze_values = [random.randint(0, 2) for _ in range(num_trials)]
-    elif model_name=="ViT":
+    elif model_name=="MaxViT":
         n_freeze_values = [random.randint(0, 3) for _ in range(num_trials)]
     elif model_name=="Swin":
         n_freeze_values = [random.randint(0, 5) for _ in range(num_trials)]

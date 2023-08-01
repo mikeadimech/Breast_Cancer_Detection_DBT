@@ -15,8 +15,8 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
             'weight_decay': 0.0001
         }
     elif model_name=="ConvNeXt":
-        num_epochs = 2
-        batch_size = 2
+        num_epochs = 7
+        batch_size = 16
         img_size = 512
         n_layers_to_freeze = 1
         # model = load_convnext_model(num_classes, from_path)
@@ -24,23 +24,23 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
         model = timm.create_model('convnextv2_huge.fcmae_ft_in22k_in1k_512', pretrained=True, num_classes=4)
         hyperparameters = {
             'learning_rate': 0.001,
-            'beta1': 0.9,
-            'beta2': 0.999,
-            'weight_decay': 0.1
-        }
-    elif model_name=="ViT":
-        num_epochs = 3
-        batch_size = 16
-        img_size = 512
-        n_layers_to_freeze = 1
-        model = timm.create_model('maxvit_base_tf_512.in21k_ft_in1k', pretrained=True, num_classes=4)
-        # model = load_vit_model(num_classes, from_path)
-        # model = freeze_layers(model, n_layers_to_freeze)
-        hyperparameters = {
-            'learning_rate': 0.001,
-            'beta1': 0.9,
+            'beta1': 0.8,
             'beta2': 0.999,
             'weight_decay': 0.0001
+        }
+    elif model_name=="MaxViT":
+        num_epochs = 7
+        batch_size = 16
+        img_size = 512
+        n_layers_to_freeze = 2
+        model = timm.create_model('maxvit_base_tf_512.in21k_ft_in1k', pretrained=True, num_classes=4)
+        # model = load_vit_model(num_classes, from_path)
+        model = freeze_layers(model, n_layers_to_freeze)
+        hyperparameters = {
+            'learning_rate': 0.0005,
+            'beta1': 0.8,
+            'beta2': 0.999,
+            'weight_decay': 0.006
         }
         
     elif model_name=="Swin":
@@ -169,6 +169,9 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
         # Track hyperparameters and run metadata
         config={
             "learning_rate": optimizer.param_groups[-1]['lr'],
+            "weight_decay": optimizer.param_groups[-1]['weight_decay'],
+            "beta1": optimizer.param_groups[-1]['betas'][0],
+            "beta2": optimizer.param_groups[-1]['betas'][1],
             "epochs": num_epochs,
             "batch_size:": batch_size,
             "n_augment": n_augment,
@@ -234,6 +237,9 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
         print(f'Train Loss: {train_epoch_loss:.4f}  |  Train ROC AUC: {train_roc_auc:.4f}  |  Train Balanced Accuracy: {train_bal_acc:.4f}')
 
+        conf_mat_train = pd.DataFrame(confusion_matrix(all_train_labels, all_train_preds), index=unique_labels, columns=unique_labels)
+        print('\nConfusion Matrix (Train):\n',conf_mat_train,'\n',sep='')
+
         # Validation
         model.eval()
         running_loss = 0.0
@@ -266,6 +272,9 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
         val_balanced_accuracy_scores.append(val_bal_acc)
 
         print(f'Validation Loss: {val_epoch_loss:.4f}  |  Validation ROC AUC: {val_roc_auc:.4f}  |  Validation Balanced Accuracy: {val_bal_acc:.4f}')
+
+        conf_mat = pd.DataFrame(confusion_matrix(all_labels, all_preds), index=unique_labels, columns=unique_labels)
+        print('\nConfusion Matrix (Val):\n',conf_mat,'\n',sep='')
 
         wandb.log({"train_loss":train_epoch_loss, "val_loss":val_epoch_loss, "roc_auc_train":train_roc_auc, "roc_auc_val":val_roc_auc, "balanced_accuracy_train":train_bal_acc, "balanced_accuracy_val":val_bal_acc})
     
@@ -477,7 +486,8 @@ def evaluate_model(model, test_loader, device, unique_labels, model_name, save_f
     for metric, value in metrics.items():
         print(f"{metric.capitalize()}: {value:.3f}")
 
-    classification_report(all_labels, all_preds)#, labels=unique_labels)
+    print("unique labels\n",unique_labels)
+    print('\n',classification_report(all_labels, all_preds, target_names=unique_labels),'\n',sep='')
 
     if save_fig is not None:
     
@@ -486,6 +496,7 @@ def evaluate_model(model, test_loader, device, unique_labels, model_name, save_f
         plot_roc_curve(np.eye(len(unique_labels))[all_labels], all_probs, len(unique_labels), unique_labels, save_fig, model_name)
     
     else:
+        
         conf_mat = pd.DataFrame(confusion_matrix(all_labels,all_preds), index=unique_labels, columns=unique_labels)
         print('\nConfusion Matrix:\n',conf_mat,'\n',sep='')
     

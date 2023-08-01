@@ -34,7 +34,7 @@ def check_positive(value):
     return ivalue
 
 def parse_arguments():
-    VALID_MODELS = ['Swin', 'ViT', 'ResNet', 'ConvNeXt']
+    VALID_MODELS = ['Swin', 'MaxViT', 'ResNet', 'ConvNeXt']
 
     # Create an ArgumentParser object and define the arguments
     parser = argparse.ArgumentParser()
