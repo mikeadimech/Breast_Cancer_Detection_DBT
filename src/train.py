@@ -1,6 +1,6 @@
 from utils import *
 
-def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
+def load_model(model_name, num_classes, from_path=None):
     if model_name=="ResNet":
         num_epochs = 2
         batch_size = 32
@@ -15,13 +15,13 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
             'weight_decay': 0.0001
         }
     elif model_name=="ConvNeXt":
-        num_epochs = 7
+        num_epochs = 9
         batch_size = 16
         img_size = 512
-        n_layers_to_freeze = 1
+        n_layers_to_freeze = 2
         # model = load_convnext_model(num_classes, from_path)
-        # model = freeze_layers(model, n_layers_to_freeze)
         model = timm.create_model('convnextv2_huge.fcmae_ft_in22k_in1k_512', pretrained=True, num_classes=4)
+        model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.001,
             'beta1': 0.8,
@@ -29,7 +29,7 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
             'weight_decay': 0.0001
         }
     elif model_name=="MaxViT":
-        num_epochs = 7
+        num_epochs = 3
         batch_size = 16
         img_size = 512
         n_layers_to_freeze = 2
@@ -37,10 +37,10 @@ def load_model(model_name, num_classes, from_path=None, n_layers_to_freeze=1):
         # model = load_vit_model(num_classes, from_path)
         model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
-            'learning_rate': 0.0005,
-            'beta1': 0.8,
+            'learning_rate': 0.001,
+            'beta1': 0.9,
             'beta2': 0.999,
-            'weight_decay': 0.006
+            'weight_decay': 0.01
         }
         
     elif model_name=="Swin":
@@ -161,7 +161,7 @@ def get_loss_optimizer(model, hyperparameters, class_counts, device):
 
 def train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
                     unique_labels, device, num_epochs, batch_size, n_augment, n_freeze, model_name, save_weights=None, \
-                    save_fig=None, evaluate=True):
+                    save_fig=None, evaluate=True, trial=None):
     
     # log training process
     run = wandb.init(
@@ -278,6 +278,12 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
         wandb.log({"train_loss":train_epoch_loss, "val_loss":val_epoch_loss, "roc_auc_train":train_roc_auc, "roc_auc_val":val_roc_auc, "balanced_accuracy_train":train_bal_acc, "balanced_accuracy_val":val_bal_acc})
     
+        # Pruning based on the intermediate value.
+        if trial is not None:
+            trial.report(val_bal_acc, epoch)
+            if trial.should_prune():
+                raise optuna.exceptions.TrialPruned()
+
     end_time = time.time()
     seconds = end_time - start_time
     m, s = divmod(seconds, 60)
@@ -298,149 +304,6 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
     if evaluate==True:
         metrics = evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig)
         wandb.log(metrics)
-    else:
-        metrics = {}
-
-    wandb.finish()
-
-    metrics['training_time'] = f"{h:02.0f}:{m:02.0f}:{s:02.0f}"
-
-    return metrics
-
-def train_model_cv(model, criterion, optimizer, train_dataset, train_loader, test_loader, unique_labels, \
-                   device, num_epochs, batch_size, n_splits, n_augment, model_name, save_weights=None, save_fig=None, evaluate=True):
-    
-    # log training process
-    run = wandb.init(
-        project="breast-cancer-dbt-"+model_name,
-        # Track hyperparameters and run metadata
-        config={
-            "learning_rate": optimizer.param_groups[-1]['lr'],
-            "epochs": num_epochs,
-            "batch_size:": batch_size,
-            "n_splits": n_splits,
-            "n_augment": n_augment
-        }
-    )
-    
-    model.to(device)
-    
-    # Initialize the KFold class
-    kfold = StratifiedKFold(n_splits=n_splits, shuffle=True)
-
-    # Loop over all datasets in the ConcatDataset
-    labels = []
-
-    # Iterate over each Dataset in the ConcatDataset
-    for dataset in train_dataset.datasets:
-        # Convert one-hot encoded labels to categorical labels and add them to the list
-        labels.extend(np.argmax(dataset.data.iloc[:, 3:].values, axis=1))
-
-    # Convert the list to a numpy array
-    labels = np.array(labels)
-
-    train_losses = []
-    val_losses = []
-    epochs = []
-    roc_auc_scores = []
-    balanced_accuracy_scores= []
-
-    # set timer
-    start_time = time.time()
-
-    # Start the k-fold cross-validation
-    for fold, (train_ids, val_ids) in enumerate(kfold.split(train_dataset, labels)):
-        # Print
-        print(f'\nFOLD {fold+1}/{n_splits}')
-        print('--------------------------------')
-
-        # Define the data loaders for training and validation
-        train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
-        val_subsampler = torch.utils.data.SubsetRandomSampler(val_ids)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=train_subsampler)
-        val_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, sampler=val_subsampler)
-
-        # Train the model
-        model.train()
-        for epoch in range(num_epochs):
-            running_loss = 0.0
-            for inputs, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}, Training"):
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-
-                # Forward pass
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-
-                # Backward pass and optimize
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                running_loss += loss.item() * inputs.size(0)
-
-            train_epoch_loss = running_loss / len(train_loader.dataset)
-            print(f'Train Loss: {train_epoch_loss:.4f}')
-            train_losses.append(train_epoch_loss)
-            epochs.append(epoch)
-
-            # Validation
-            model.eval()
-            running_loss = 0.0
-            all_preds = []
-            all_labels = []
-            all_probs = []
-            with torch.no_grad():
-                for inputs, labels in tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs}, Validation"):
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
-
-                    outputs = model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels)
-                    probs = torch.nn.functional.softmax(outputs, dim=1)
-                    running_loss += loss.item() * inputs.size(0)
-                    all_preds.extend(preds.cpu().numpy())
-                    all_labels.extend(labels.cpu().numpy())
-                    all_probs.append(probs.cpu().numpy())
-
-            all_probs = np.vstack(all_probs)  # Stack the probabilities
-
-
-            val_epoch_loss = running_loss / len(val_loader.dataset)
-            val_losses.append(val_epoch_loss)
-
-            roc_auc = roc_auc_score(all_labels, all_probs, average='macro', multi_class='ovr')
-            roc_auc_scores.append(roc_auc)
-
-            bal_acc = balanced_accuracy_score(all_labels, all_preds)
-            balanced_accuracy_scores.append(bal_acc)
-
-            print(f'Validation Loss: {val_epoch_loss:.4f}  |  ROC AUC: {roc_auc:.4f}  |  Balanced Accuracy: {bal_acc:.4f}')
-
-            wandb.log({"train_loss": train_epoch_loss, "val_loss": val_epoch_loss, "roc_auc":roc_auc, "balanced_accuracy":bal_acc})
-    
-    end_time = time.time()
-    seconds = end_time - start_time
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-    print(f"\n______________________\nModel training complete.\nTotal training time: {seconds:.2f} seconds ({h:02.0f}:{m:02.0f}:{s:02.0f})")
-
-    # save model weights
-    if save_weights is not None:
-        torch.save(model.state_dict(), save_weights+'dbt_classification_'+model_name+'.pth')
-        print("Weights saved to",save_weights+'dbt_classification_'+model_name+'.pth')
-    
-    # plot loss
-    if save_fig is not None:
-        plot_loss(epochs, train_losses, val_losses, save_fig, model_name)
-        plot_roc_auc(epochs, roc_auc_scores, save_fig, model_name)
-
-    if evaluate==True:
-        metrics = evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig)
-        wandb.log(metrics)
-        
-
     else:
         metrics = {}
 

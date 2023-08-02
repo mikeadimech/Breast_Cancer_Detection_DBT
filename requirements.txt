@@ -17,3 +17,5 @@ pylibjpeg-openjpeg
 pylibjpeg
 wandb
 timm
+optuna
+joblib

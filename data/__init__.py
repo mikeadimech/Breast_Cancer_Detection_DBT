@@ -52,7 +52,7 @@ class RandomNoise:
 
 def read_dataset(dataset_path):
     df = pd.read_csv(dataset_path+'data_csv/train-v2_table_list_slice.csv')
-    df.drop(df.tail(16500).index, axis=0, inplace=True)
+    # df.drop(df.tail(16500).index, axis=0, inplace=True)
     return df
 
 def plot_augmentations(image_path, augment_list, transform, save_path):
@@ -196,28 +196,40 @@ def mean_std(loader):
 
     return mean, std
 
+# def split_data(df, test_size=0.2, val_size=0.2):
+#     """
+#     Split the data into train, validation and test sets.
+#     """
+#     # Create a new column indicating whether each study includes at least one image where 'Cancer' is 1
+#     df['StudyHasCancer'] = df.groupby('StudyUID')['Cancer'].transform('max')
+
+#     # Get the unique studies and their cancer status
+#     unique_studies = df[['StudyUID', 'StudyHasCancer']].drop_duplicates()
+
+#     # Split the studies into a temporary train set and the test set
+#     temp_train_studies, test_studies = train_test_split(unique_studies, test_size=test_size, stratify=unique_studies['StudyHasCancer'], random_state=5)
+
+#     # Split the temporary train set into the final train set and the validation set
+#     train_studies, val_studies = train_test_split(temp_train_studies, test_size=val_size/(1-test_size), stratify=temp_train_studies['StudyHasCancer'], random_state=5)
+
+#     df.drop('StudyHasCancer', axis=1, inplace=True)
+
+#     # Get the training, validation and test data
+#     train_data = df[df['StudyUID'].isin(train_studies['StudyUID'])]
+#     val_data = df[df['StudyUID'].isin(val_studies['StudyUID'])]
+#     test_data = df[df['StudyUID'].isin(test_studies['StudyUID'])]
+
+#     return train_data, val_data, test_data
+
 def split_data(df, test_size=0.2, val_size=0.2):
     """
     Split the data into train, validation and test sets.
     """
-    # Create a new column indicating whether each study includes at least one image where 'Cancer' is 1
-    df['StudyHasCancer'] = df.groupby('StudyUID')['Cancer'].transform('max')
-
-    # Get the unique studies and their cancer status
-    unique_studies = df[['StudyUID', 'StudyHasCancer']].drop_duplicates()
-
-    # Split the studies into a temporary train set and the test set
-    temp_train_studies, test_studies = train_test_split(unique_studies, test_size=test_size, stratify=unique_studies['StudyHasCancer'], random_state=42)
+    # Split the data into a temporary train set and the test set
+    temp_train_data, test_data = train_test_split(df, test_size=test_size, stratify=df[['Cancer', 'Actionable', 'Benign', 'Normal']], random_state=5)
 
     # Split the temporary train set into the final train set and the validation set
-    train_studies, val_studies = train_test_split(temp_train_studies, test_size=val_size/(1-test_size), stratify=temp_train_studies['StudyHasCancer'], random_state=42)
-
-    df.drop('StudyHasCancer', axis=1, inplace=True)
-
-    # Get the training, validation and test data
-    train_data = df[df['StudyUID'].isin(train_studies['StudyUID'])]
-    val_data = df[df['StudyUID'].isin(val_studies['StudyUID'])]
-    test_data = df[df['StudyUID'].isin(test_studies['StudyUID'])]
+    train_data, val_data = train_test_split(temp_train_data, test_size=val_size/(1-test_size), stratify=temp_train_data[['Cancer', 'Actionable', 'Benign', 'Normal']], random_state=5)
 
     return train_data, val_data, test_data
 
