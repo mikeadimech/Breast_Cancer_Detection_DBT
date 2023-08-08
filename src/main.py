@@ -1,6 +1,6 @@
 from utils import *
  
-def fine_tuning(model_name, verbose, device):
+def fine_tuning(model_name, img_size, verbose, device):
     
     dataset_path = '/data/md311/Breast_Cancer_Detection_DBT/data/'
     save_weights_path = '/data/md311/Breast_Cancer_Detection_DBT/models/'
@@ -12,9 +12,9 @@ def fine_tuning(model_name, verbose, device):
     n_augment = 1
     num_classes = 4
 
-    model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes)
+    model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes, img_size=img_size)
 
-    train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size, save_fig_path)
+    train_loader, val_loader, test_loader, train_dataset, _, _, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size, save_fig_path)
     
     unique_labels = df.columns.values[3:]
     
@@ -50,7 +50,7 @@ def fine_tuning(model_name, verbose, device):
     
 def main():
 
-    model_name, verbose, _ = parse_arguments()
+    model_name, verbose, _, img_size = parse_arguments()
 
     wandb.login()
 
@@ -61,7 +61,7 @@ def main():
 
     print("Device",device)
 
-    fine_tuning(model_name, verbose, device)
+    fine_tuning(model_name, img_size, verbose, device)
 
 if __name__ == "__main__":
     main()

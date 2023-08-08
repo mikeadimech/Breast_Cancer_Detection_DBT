@@ -9,7 +9,6 @@ imagecorruptions
 scipy
 mmcv-full
 scikit-learn
-skorch
 opencv-contrib-python-headless
 pydicom
 pyjpegls
@@ -19,3 +18,4 @@ wandb
 timm
 optuna
 joblib
+focal_loss_torch

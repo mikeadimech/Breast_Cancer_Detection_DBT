@@ -1,26 +1,14 @@
 from utils import *
 
-def load_model(model_name, num_classes, from_path=None):
-    if model_name=="ResNet":
-        num_epochs = 2
-        batch_size = 32
-        img_size = 224
-        n_layers_to_freeze = 1
-        model = load_resnet50_model(num_classes, from_path)
-        model = freeze_layers(model, n_layers_to_freeze)
-        hyperparameters = {
-            'learning_rate': 0.001,
-            'beta1': 0.9,
-            'beta2': 0.999,
-            'weight_decay': 0.0001
-        }
-    elif model_name=="ConvNeXt":
-        num_epochs = 9
+def load_model(model_name, num_classes, from_path=None, img_size=512):
+    if model_name=="ConvNeXt":
+        num_epochs = 6
         batch_size = 16
-        img_size = 512
         n_layers_to_freeze = 2
-        # model = load_convnext_model(num_classes, from_path)
-        model = timm.create_model('convnextv2_huge.fcmae_ft_in22k_in1k_512', pretrained=True, num_classes=4)
+        if img_size==512:
+            model = timm.create_model('convnextv2_huge.fcmae_ft_in22k_in1k_512', pretrained=True, num_classes=4)
+        else:
+            raise Exception("Invalid image size for ConvNeXt model - only 512 accepted.")
         model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
             'learning_rate': 0.001,
@@ -29,108 +17,29 @@ def load_model(model_name, num_classes, from_path=None):
             'weight_decay': 0.0001
         }
     elif model_name=="MaxViT":
-        num_epochs = 3
+        num_epochs = 2
         batch_size = 16
-        img_size = 512
         n_layers_to_freeze = 2
-        model = timm.create_model('maxvit_base_tf_512.in21k_ft_in1k', pretrained=True, num_classes=4)
-        # model = load_vit_model(num_classes, from_path)
+        if img_size==224:
+            model = timm.create_model('maxvit_base_tf_224.in1k', pretrained=True, num_classes=4)
+        elif img_size==384:
+            model = timm.create_model('maxvit_base_tf_384.in21k_ft_in1k', pretrained=True, num_classes=4)
+        elif img_size==512:
+            model = timm.create_model('maxvit_base_tf_512.in21k_ft_in1k', pretrained=True, num_classes=4)
         model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
-            'learning_rate': 0.001,
+            'learning_rate': 0.01,
             'beta1': 0.9,
-            'beta2': 0.999,
-            'weight_decay': 0.01
-        }
-        
-    elif model_name=="Swin":
-        num_epochs = 6
-        batch_size = 2
-        img_size = 1024
-        n_layers_to_freeze = 0
-        model = load_swin_model(num_classes, from_path)
-        # model = freeze_layers(model, n_layers_to_freeze)
-        hyperparameters = {
-            'learning_rate': 0.0005,
-            'beta1': 0.9,
-            'beta2': 0.999,
-            'weight_decay': 0.1
+            'beta2': 0.99,
+            'weight_decay': 0.001
         }
     else:
         raise Exception("Invalid model name.")
 
+    if from_path is not None:
+        model.load_state_dict(torch.load(from_path))
+
     return model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze
-
-def load_resnet50_model(num_classes, saved_weights_path=None):
-    # Load the pretrained model
-    model = models.resnet50(weights='DEFAULT')
-    
-    # Get the input of the fc layer
-    num_ftrs = model.fc.in_features
-    
-    # Re-define the fc layer / classifier
-    model.fc = nn.Linear(num_ftrs, num_classes)
-
-    # Load the model weights from the saved file
-    if saved_weights_path is not None:
-        model.load_state_dict(torch.load(saved_weights_path))
-    
-    return model
-
-def load_convnext_model(num_classes, saved_weights_path=None):
-    # Load the pretrained model
-    model = models.convnext_large(weights='DEFAULT')
-    
-    # Get the number of input features to the last layer
-    num_ftrs = model.classifier[2].in_features
-
-    # Modify the final layer for binary classification
-    model.classifier[2] = nn.Linear(num_ftrs, num_classes)
-
-    # Load the model weights from the saved file
-    if saved_weights_path is not None:
-        model.load_state_dict(torch.load(saved_weights_path))
-    
-    return model
-
-def load_vit_model(num_classes, saved_weights_path=None):
-    # Load the pretrained model
-    model = models.vit_b_16(weights=torchvision.models.ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1)
-
-    print(model)
-    
-    # Get the number of input features to the last layer
-    num_features = model.heads.head.in_features
-
-    # Replace the final layer to match the number of classes in your dataset
-    model.heads.head = nn.Linear(num_features, num_classes)
-
-    # Load the model weights from the saved file
-    if saved_weights_path is not None:
-        model.load_state_dict(torch.load(saved_weights_path))
-    
-    return model
-
-def load_swin_model(num_classes, saved_weights_path=None):
-    # Load the pretrained model
-    # model = models.swin_v2_b(weights='DEFAULT')
-
-    # Load not pre trained model
-    model = models.swin_v2_s(weights=None)
-
-    # print(model)
-    
-    # Get the number of input features to the last layer
-    num_ftrs = model.head.in_features
-
-    # Modify the final layer for binary classification
-    model.head = nn.Linear(num_ftrs, num_classes)
-
-    # Load the model weights from the saved file
-    if saved_weights_path is not None:
-        model.load_state_dict(torch.load(saved_weights_path))
-    
-    return model
 
 def freeze_layers(model, n_layers_to_freeze):
     layers = list(model.children())[:n_layers_to_freeze]
@@ -148,7 +57,9 @@ def get_loss_optimizer(model, hyperparameters, class_counts, device):
     print("class weights:",class_weights)
 
     # Define the loss function with class weights
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    # criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = FocalLoss(gamma=0.7, weights=class_weights)
+    print("Using Focal Loss...")
     
     # Define the optimizer
     params_to_update = [param for param in model.parameters() if param.requires_grad]
@@ -206,7 +117,12 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
             # Forward pass
             outputs = model(inputs)
-            loss = criterion(outputs, labels)
+
+            # Compute predictions, probabilities, and collect labels for ROC AUC and balanced accuracy
+            _, train_preds = torch.max(outputs, 1)
+            train_probs = torch.nn.functional.softmax(outputs, dim=1)
+
+            loss = criterion(train_probs, labels)
 
             # Backward pass and optimize
             optimizer.zero_grad()
@@ -215,9 +131,6 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
             running_loss += loss.item() * inputs.size(0)
 
-            # Compute predictions, probabilities, and collect labels for ROC AUC and balanced accuracy
-            _, train_preds = torch.max(outputs, 1)
-            train_probs = torch.nn.functional.softmax(outputs, dim=1)
             all_train_preds.extend(train_preds.cpu().numpy())
             all_train_labels.extend(labels.cpu().numpy())
             all_train_probs.append(train_probs.detach().cpu().numpy())
@@ -253,8 +166,9 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
                 outputs = model(inputs)
                 _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
+                
                 probs = torch.nn.functional.softmax(outputs, dim=1)
+                loss = criterion(probs, labels)
                 running_loss += loss.item() * inputs.size(0)
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())

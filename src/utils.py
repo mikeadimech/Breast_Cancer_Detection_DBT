@@ -30,6 +30,7 @@ from functools import partial
 import optuna
 from optuna.integration import PyTorchLightningPruningCallback
 import joblib
+from focal_loss.focal_loss import FocalLoss
 
 def check_positive(value):
     ivalue = int(value)
@@ -38,21 +39,24 @@ def check_positive(value):
     return ivalue
 
 def parse_arguments():
-    VALID_MODELS = ['Swin', 'MaxViT', 'ResNet', 'ConvNeXt']
+    VALID_MODELS = ['MaxViT', 'ConvNeXt']
+    VALID_SIZES = [224, 384, 512]
 
     # Create an ArgumentParser object and define the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', choices=VALID_MODELS, default='ResNet')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--trials', type=check_positive, default=0)
+    parser.add_argument('--image_size', choices=VALID_SIZES, type=check_positive, default=0)
 
     args = parser.parse_args()
 
     model_name = args.model
     verbose = args.verbose
     num_trials = args.trials
+    img_size = args.image_size
 
-    return model_name, verbose, num_trials
+    return model_name, verbose, num_trials, img_size
 
 def plot_confusion_matrix(y_true, y_pred, unique_labels, path, name):
     
@@ -130,7 +134,7 @@ def plot_roc_curve(y_true, y_score, num_classes, class_labels, path, name):
     with sns.axes_style("white"):
         plt.figure(figsize=(9,7),dpi=150)
         for i in range(num_classes):
-            plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'.format(class_labels[i], roc_auc[i]))
+            plt.plot(fpr[i], tpr[i], label='{0} (area = {1:0.2f})'.format(class_labels[i], roc_auc[i]))
         plt.plot([0, 1], [0, 1], 'k--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
@@ -169,6 +173,7 @@ sys.path.append(os.path.join(here, '..'))
 from data import *
 from train import *
 sns.set_theme()
+sns.set(font_scale=1.4)
 
 import gc
 gc.collect()

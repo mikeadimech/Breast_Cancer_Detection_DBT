@@ -2,7 +2,7 @@ from utils import *
 
 def main():
     
-    model_name, verbose, _ = parse_arguments()
+    model_name, verbose, _, _ = parse_arguments()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -13,11 +13,10 @@ def main():
     num_classes = 4
     batch_size = 128
 
-    model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes)
+    model, _, _, batch_size, img_size, _ = load_model(model_name, num_classes)
     model.to(device)
     
-    
-    train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, class_counts = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size)
+    _, _, test_loader, _, _, _, _ = preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size)
 
     unique_labels = df.columns.values[3:]
 

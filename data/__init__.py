@@ -52,7 +52,7 @@ class RandomNoise:
 
 def read_dataset(dataset_path):
     df = pd.read_csv(dataset_path+'data_csv/train-v2_table_list_slice.csv')
-    # df.drop(df.tail(16500).index, axis=0, inplace=True)
+    df.drop(df.tail(16600).index, axis=0, inplace=True)
     return df
 
 def plot_augmentations(image_path, augment_list, transform, save_path):
