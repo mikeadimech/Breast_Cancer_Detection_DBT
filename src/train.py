@@ -17,7 +17,7 @@ def load_model(model_name, num_classes, from_path=None, img_size=512):
             'weight_decay': 0.0001
         }
     elif model_name=="MaxViT":
-        num_epochs = 2
+        num_epochs = 7
         batch_size = 16
         n_layers_to_freeze = 2
         if img_size==224:
