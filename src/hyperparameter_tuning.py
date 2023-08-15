@@ -1,7 +1,17 @@
 from utils import *
 
 def objective(trial, device, model_name):
+    """
+    Optuna objective function for hyperparameter tuning.
 
+    Args:
+        trial: Optuna Trial object.
+        device: Device for training (cuda or cpu).
+        model_name (str): Name of the model.
+
+    Returns:
+        float: The ROC AUC metric to be minimized.
+    """
     dataset_path = '/data/md311/Breast_Cancer_Detection_DBT/data/' 
     df = read_dataset(dataset_path)
     
@@ -49,7 +59,12 @@ def objective(trial, device, model_name):
 
 
 def main():
+    """
+    Main function for hyperparameter tuning using Optuna.
 
+    Returns:
+        None
+    """
     model_name, verbose, num_trials, _ = parse_arguments()
     if num_trials == 0:
         raise Exception("Error: --trials must be specified.")
@@ -58,7 +73,7 @@ def main():
 
     wandb.login()
 
-    # Use partial to provide the additional arguments
+    # Use partial to provide additional arguments
     objective_with_args = partial(objective, device=device, model_name=model_name)
 
     study_path = '/data/md311/Breast_Cancer_Detection_DBT/models/'
@@ -71,7 +86,6 @@ def main():
     
     start_time = time.time()
 
-    # best_params, best_auc = hyperparameter_tuning(model_name, verbose, device, num_trials)
     study.optimize(objective_with_args, n_trials=num_trials)
 
     end_time = time.time()

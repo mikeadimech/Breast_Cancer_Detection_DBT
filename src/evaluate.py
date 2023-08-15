@@ -1,6 +1,9 @@
 from utils import *
 
 def main():
+    """
+    Main function to evaluate a fine-tuned model for breast cancer detection.
+    """
     
     model_name, verbose, _, _ = parse_arguments()
 

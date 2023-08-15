@@ -1,6 +1,18 @@
 from utils import *
 
 def load_model(model_name, num_classes, from_path=None, img_size=512):
+    """
+    Load a pre-trained model for fine-tuning.
+
+    Args:
+        model_name (str): Name of the model architecture ('ConvNeXt' or 'MaxViT').
+        num_classes (int): Number of classes for classification.
+        from_path (str): Path to a saved model checkpoint.
+        img_size (int): Size of the input images (224, 384, or 512).
+
+    Returns:
+        tuple: Loaded model, hyperparameters, num_epochs, batch_size, img_size, and n_layers_to_freeze.
+    """
     if model_name=="ConvNeXt":
         num_epochs = 10
         batch_size = 16
@@ -44,6 +56,16 @@ def load_model(model_name, num_classes, from_path=None, img_size=512):
     return model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze
 
 def freeze_layers(model, n_layers_to_freeze):
+    """
+    Freeze the specified number of layers in a model.
+
+    Args:
+        model (torch.nn.Module): The model to freeze layers in.
+        n_layers_to_freeze (int): Number of layers to freeze.
+
+    Returns:
+        torch.nn.Module: Model with frozen layers.
+    """
     layers = list(model.children())[:n_layers_to_freeze]
     for layer in layers:
         for param in layer.parameters():
@@ -51,16 +73,26 @@ def freeze_layers(model, n_layers_to_freeze):
     return model
 
 def get_loss_optimizer(model, hyperparameters, class_counts, device):
+    """
+    Get loss function and optimizer for training.
+
+    Args:
+        model (torch.nn.Module): The model to optimize.
+        hyperparameters (dict): Dictionary of hyperparameters.
+        class_counts (pd.Series): Class counts for weighted loss.
+        device (torch.device): Device to use for training.
+
+    Returns:
+        tuple: Loss criterion and optimizer.
+    """
+    
     # Calculate class weights
     class_weights = 1. / class_counts
     class_weights = class_weights / np.sum(class_weights)  # Normalize to make the weights sum to 1
     class_weights = torch.tensor(class_weights.values).float().to(device)  # Convert to a PyTorch tensor and move to device
 
-    print("class weights:",class_weights)
-
     # Define the loss function with class weights
     criterion = FocalLoss(gamma=0.7, weights=class_weights)
-    print("Using Focal Loss...")
     
     # Define the optimizer
     params_to_update = [param for param in model.parameters() if param.requires_grad]
@@ -74,6 +106,31 @@ def get_loss_optimizer(model, hyperparameters, class_counts, device):
 def train_model(model, criterion, optimizer, train_loader, val_loader, test_loader, \
                     unique_labels, device, num_epochs, batch_size, n_augment, n_freeze, model_name, save_weights=None, \
                     save_fig=None, evaluate=True, trial=None):
+    """
+    Train the given model using the provided data loaders.
+
+    Args:
+        model (torch.nn.Module): The model to be trained.
+        criterion: The loss criterion for training.
+        optimizer: The optimizer for updating model parameters.
+        train_loader: DataLoader for training data.
+        val_loader: DataLoader for validation data.
+        test_loader: DataLoader for test data.
+        unique_labels (list): List of unique labels/classes.
+        device (torch.device): Device to use for training ('cuda' or 'cpu').
+        num_epochs (int): Number of training epochs.
+        batch_size (int): Batch size for training.
+        n_augment (int): Number of augmentation steps.
+        n_freeze (int): Number of layers to freeze.
+        model_name (str): Name of the model architecture.
+        save_weights (str): Path to save model weights (default: None).
+        save_fig (str): Path to save figures (default: None).
+        evaluate (bool): If True, evaluate the model on the test set (default: True).
+        trial: Optuna trial object for hyperparameter optimization (default: None).
+
+    Returns:
+        dict: Metrics and information about the training process.
+    """
     
     # log training process
     run = wandb.init(
@@ -223,7 +280,20 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
     return metrics
 
 def evaluate_model(model, test_loader, device, unique_labels, model_name, save_fig=None):
-    
+    """
+    Evaluate the trained model on the test dataset.
+
+    Args:
+        model (torch.nn.Module): The trained model to be evaluated.
+        test_loader: DataLoader for test data.
+        device (torch.device): Device to use for evaluation ('cuda' or 'cpu').
+        unique_labels (list): List of unique labels/classes.
+        model_name (str): Name of the model architecture.
+        save_fig (str): Path to save evaluation figures (default: None).
+
+    Returns:
+        dict: Evaluation metrics.
+    """
     print("\n--------------------------------\nEvaluating Model...\n")
     
     model.eval()  # Set the model to evaluation mode

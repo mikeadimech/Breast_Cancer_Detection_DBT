@@ -16,7 +16,7 @@ by [Mikea Dimech](dimech.ai)<br>
 
 ## Description
 
-This project investigates the application of transfer learning using a Transformer-based and CNN architecture, specifically on Digital Breast Tomosynthesis (DBT) images. The dataset used was obtained from the [Cancer Imaging Archive](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=64685580).
+This project investigates the application of Transformer and CNN architectures via Transfer Learning for Breast Cancer Detection, specifically on Digital Breast Tomosynthesis (DBT) images. The dataset used was obtained from the [Cancer Imaging Archive](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=64685580).
 
 ## Getting Started
 
@@ -46,6 +46,8 @@ pip install -r requirements.txt
 
 ### Usage
 
+You must first download the dataset from the [Cancer Imaging Archive](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=64685580) and store it in `/data/images`. Then, run the `preprocessing.ipynb` notebook.
+
 To run the main training script, use the following command:
 ```
 python src/main.py --model MaxViT --image_size 512
@@ -53,10 +55,10 @@ python src/main.py --model MaxViT --image_size 512
 
 For hyperparameter tuning:
 ```
-python src/hyperparameter_tuning.py --model MaxViT --trials 100 --verbose
+python src/hyperparameter_tuning.py --model MaxViT --trials 100
 ```
 
-For model evaluation:
+For model evaluation (provided that you have a trained model stored in `/models`):
 ```
 python src/evaluate.py --model MaxViT
 ```
@@ -81,12 +83,12 @@ Replace `MaxViT` and `512` with your desired values for the following arguments:
 If you use this code or the associated models in your research, please cite using the following BibTeX entry:
 ```
 @misc{dimech2023transformerdbt,
-author = {Dimech, Mikea},
-title = {Transformer-based Transfer Learning for Breast Cancer Detection via Digital Breast Tomosynthesis},
-year = {2023},
-publisher = {Zenodo},
-version = {1.0},
-doi = {10.5281/zenodo.8243431},
-url = {https://doi.org/10.5281/zenodo.8243431}
+    author = {Dimech, Mikea},
+    title = {Transformer-based Transfer Learning for Breast Cancer Detection via Digital Breast Tomosynthesis},
+    year = {2023},
+    publisher = {Zenodo},
+    version = {1.0},
+    doi = {10.5281/zenodo.8243431},
+    url = {https://doi.org/10.5281/zenodo.8243431}
 }
 ```

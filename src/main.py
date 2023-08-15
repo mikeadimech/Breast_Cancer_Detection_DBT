@@ -1,6 +1,18 @@
 from utils import *
  
 def fine_tuning(model_name, img_size, verbose, device):
+    """
+    Fine-tunes a pre-trained model for breast cancer image classification.
+
+    Args:
+        model_name (str): Name of the model architecture (e.g., 'MaxViT', 'ConvNeXt').
+        img_size (int): Size of the input images (224, 384, or 512).
+        verbose (bool): If True, print additional information during execution.
+        device (torch.device): Device to use for training ('cuda' or 'cpu').
+
+    Returns:
+        None
+    """
     
     dataset_path = '/data/md311/Breast_Cancer_Detection_DBT/data/'
     save_weights_path = '/data/md311/Breast_Cancer_Detection_DBT/models/'
