@@ -47,7 +47,7 @@ def parse_arguments():
     parser.add_argument('--model', choices=VALID_MODELS, default='ResNet')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--trials', type=check_positive, default=0)
-    parser.add_argument('--image_size', choices=VALID_SIZES, type=check_positive, default=0)
+    parser.add_argument('--image_size', choices=VALID_SIZES, type=check_positive, default=512)
 
     args = parser.parse_args()
 

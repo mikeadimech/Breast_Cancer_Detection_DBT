@@ -52,7 +52,6 @@ class RandomNoise:
 
 def read_dataset(dataset_path):
     df = pd.read_csv(dataset_path+'data_csv/train-v2_table_list_slice.csv')
-    # df.drop(df.tail(16600).index, axis=0, inplace=True)
     return df
 
 def plot_augmentations(image_path, augment_list, transform, save_path):
@@ -75,10 +74,6 @@ def plot_augmentations(image_path, augment_list, transform, save_path):
     image = Image.fromarray(rgb_image_array)
 
     image = transform(image)
-
-    print("image mode",image.mode)
-
-    # image = image.resize((512,512))
 
     fig = plt.figure(figsize=(2+(2*len(augment_list)), 3), dpi=250)
 
@@ -123,7 +118,6 @@ def preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size, savefi
     transform = transforms.Compose([
         transforms.Resize((img_size, img_size), antialias=True), 
         transforms.ToTensor(),  # Convert PIL image to PyTorch tensor
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize to ImageNet mean and std
         transforms.Normalize(mean=[0.0824, 0.0824, 0.0824], std=[0.1355, 0.1355, 0.1355])  # Normalize to DBT dataset mean and std
     ])
 
@@ -149,8 +143,11 @@ def preprocess_dataset(df, dataset_path, n_augment, batch_size, img_size, savefi
     # Create data loaders for training, validation and testing
     train_loader, val_loader, test_loader = create_data_loaders(train_dataset, val_dataset, test_dataset, batch_size)
 
+    # Uncomment to calculate mean and std of the dataset (takes long)
     # mean, std, min_value, max_value = calculate_statistics(train_loader)
     # print(f"Mean: {mean}, Std: {std}, Min: {min_value}, Max: {max_value}")
+    
+    # Output: 
     # Mean: tensor([-0.0004, -0.0004, -0.0004]), Std: tensor([1.0003, 1.0003, 1.0003]), Min: -0.6081181168556213, Max: 6.771955490112305
 
     # Print the class distribution 
@@ -196,40 +193,28 @@ def mean_std(loader):
 
     return mean, std
 
-# def split_data(df, test_size=0.2, val_size=0.2):
-#     """
-#     Split the data into train, validation and test sets.
-#     """
-#     # Create a new column indicating whether each study includes at least one image where 'Cancer' is 1
-#     df['StudyHasCancer'] = df.groupby('StudyUID')['Cancer'].transform('max')
-
-#     # Get the unique studies and their cancer status
-#     unique_studies = df[['StudyUID', 'StudyHasCancer']].drop_duplicates()
-
-#     # Split the studies into a temporary train set and the test set
-#     temp_train_studies, test_studies = train_test_split(unique_studies, test_size=test_size, stratify=unique_studies['StudyHasCancer'], random_state=5)
-
-#     # Split the temporary train set into the final train set and the validation set
-#     train_studies, val_studies = train_test_split(temp_train_studies, test_size=val_size/(1-test_size), stratify=temp_train_studies['StudyHasCancer'], random_state=5)
-
-#     df.drop('StudyHasCancer', axis=1, inplace=True)
-
-#     # Get the training, validation and test data
-#     train_data = df[df['StudyUID'].isin(train_studies['StudyUID'])]
-#     val_data = df[df['StudyUID'].isin(val_studies['StudyUID'])]
-#     test_data = df[df['StudyUID'].isin(test_studies['StudyUID'])]
-
-#     return train_data, val_data, test_data
-
 def split_data(df, test_size=0.2, val_size=0.2):
     """
     Split the data into train, validation and test sets.
     """
-    # Split the data into a temporary train set and the test set
-    temp_train_data, test_data = train_test_split(df, test_size=test_size, stratify=df[['Cancer', 'Actionable', 'Benign', 'Normal']], random_state=5)
+    # Create a new column indicating whether each study includes at least one image where 'Cancer' is 1
+    df['StudyHasCancer'] = df.groupby('StudyUID')['Cancer'].transform('max')
+
+    # Get the unique studies and their cancer status
+    unique_studies = df[['StudyUID', 'StudyHasCancer']].drop_duplicates()
+
+    # Split the studies into a temporary train set and the test set
+    temp_train_studies, test_studies = train_test_split(unique_studies, test_size=test_size, stratify=unique_studies['StudyHasCancer'], random_state=5)
 
     # Split the temporary train set into the final train set and the validation set
-    train_data, val_data = train_test_split(temp_train_data, test_size=val_size/(1-test_size), stratify=temp_train_data[['Cancer', 'Actionable', 'Benign', 'Normal']], random_state=5)
+    train_studies, val_studies = train_test_split(temp_train_studies, test_size=val_size/(1-test_size), stratify=temp_train_studies['StudyHasCancer'], random_state=5)
+
+    df.drop('StudyHasCancer', axis=1, inplace=True)
+
+    # Get the training, validation and test data
+    train_data = df[df['StudyUID'].isin(train_studies['StudyUID'])]
+    val_data = df[df['StudyUID'].isin(val_studies['StudyUID'])]
+    test_data = df[df['StudyUID'].isin(test_studies['StudyUID'])]
 
     return train_data, val_data, test_data
 

@@ -8,3 +8,4 @@ wandb/
 ht_fig/
 models/hyperparameters.csv
 *.pkl
+notebooks/train.ipynb

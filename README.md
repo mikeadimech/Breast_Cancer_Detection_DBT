@@ -1,16 +1,22 @@
-# Breast Cancer Detection via Digital Breast Tomosynthesis
+# Transformer-based Transfer Learning for Breast Cancer Detection via Digital Breast Tomosynthesis
 
 by [Mikea Dimech](dimech.ai)<br>
 *University of St Andrews*
 
-- [Breast Cancer Detection via Digital Breast Tomosynthesis](#breast-cancer-detection-via-digital-breast-tomosynthesis)
-  - [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-    - [Usage](#usage)
-  - [Author](#author)
-  - [License](#license)
+## Table of Contents
 
+- [Description](#description)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [Author](#author)
+- [DOI](#doi)
+- [Cite As](#cite-as)
+
+## Description
+
+This project investigates the application of transfer learning using a Transformer-based and CNN architecture, specifically on Digital Breast Tomosynthesis (DBT) images. The dataset used was obtained from the [Cancer Imaging Archive](https://wiki.cancerimagingarchive.net/pages/viewpage.action?pageId=64685580).
 
 ## Getting Started
 
@@ -18,51 +24,69 @@ These instructions will guide you on how to set up and run the project on your l
 
 ### Prerequisites
 
-- Python (version X.X.X)
-- Other dependencies...
+- Python (version 3.8.13)
 
 ### Installation
 
 1. Clone the repository:
 
 ```
-git clone https://github.com/your-username/project-name.git
+git clone https://github.com/mikeadimech/Breast_Cancer_Detection_DBT.git
 ```
 
 2. Navigate to the project directory:
-   
 ```
-cd project-name
+cd Breast_Cancer_Detection_DBT
 ```
-   
 
 3. Install the required dependencies:
-
 ```
 pip install -r requirements.txt
 ```
-   
 
 ### Usage
 
-Instructions on how to use or run the code go here.
-
-Example command to run the main script:
-
+To run the main training script, use the following command:
 ```
-python src/main.py --model Swin --transferlearning single
+python src/main.py --model MaxViT --image_size 512
 ```
 
-Replace `Swin` and `single` with your desired values for the following arguments:
+For hyperparameter tuning:
+```
+python src/hyperparameter_tuning.py --model MaxViT --trials 100 --verbose
+```
 
-- `--model`: Possible options: `ResNet` (default), `Swin`, `ViT`, `ConvNeXt`
-- `--transferlearning`: Possible options: `single` (default), `multi`
-- `--verbose`
+For model evaluation:
+```
+python src/evaluate.py --model MaxViT
+```
+
+Replace `MaxViT` and `512` with your desired values for the following arguments:
+
+- `--model`: Model architecture. Possible options: `MaxViT` (default), `ConvNeXt`
+- `--image_size`: Image input size for the model. Possible options: `224`, `384`, `512` (default)
+- `--verbose`: For verbose output.
+- `--trials`: Number of trials for hyperparameter tuning.
 
 ## Author
 
 - [Mikea Dimech](https://github.com/mikeadimech)
 
-## License
+## DOI
 
-This project is licensed under the [License Name](LICENSE) - see the LICENSE file for details.
+[10.5281/zenodo.8243431](https://doi.org/10.5281/zenodo.8243431)
+
+## Cite As
+
+If you use this code or the associated models in your research, please cite using the following BibTeX entry:
+```
+@misc{dimech2023transformerdbt,
+author = {Dimech, Mikea},
+title = {Transformer-based Transfer Learning for Breast Cancer Detection via Digital Breast Tomosynthesis},
+year = {2023},
+publisher = {Zenodo},
+version = {1.0},
+doi = {10.5281/zenodo.8243431},
+url = {https://doi.org/10.5281/zenodo.8243431}
+}
+```

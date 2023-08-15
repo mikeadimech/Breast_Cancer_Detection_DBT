@@ -2,14 +2,14 @@ from utils import *
 
 def objective(trial, device, model_name):
 
-    dataset_path ='/data/md311/Breast_Cancer_Detection_DBT/data/' 
+    dataset_path = '/data/md311/Breast_Cancer_Detection_DBT/data/' 
     df = read_dataset(dataset_path)
     
     # Define an objective function to be minimized.
-    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
+    learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
     beta1 = trial.suggest_float('beta1', 0.8, 1.0)
     beta2 = trial.suggest_float('beta2', 0.9, 1.0)
-    weight_decay = trial.suggest_float('weight_decay', 1e-5, 1e-3, log=True)
+    weight_decay = trial.suggest_float('weight_decay', 1e-5, 1e-2, log=True)
     n_augment = trial.suggest_int('n_augment', 0, 25)
 
     print("\nNEW TRIAL\n")

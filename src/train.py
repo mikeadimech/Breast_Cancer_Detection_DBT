@@ -2,7 +2,7 @@ from utils import *
 
 def load_model(model_name, num_classes, from_path=None, img_size=512):
     if model_name=="ConvNeXt":
-        num_epochs = 6
+        num_epochs = 10
         batch_size = 16
         n_layers_to_freeze = 2
         if img_size==512:
@@ -11,13 +11,13 @@ def load_model(model_name, num_classes, from_path=None, img_size=512):
             raise Exception("Invalid image size for ConvNeXt model - only 512 accepted.")
         model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
-            'learning_rate': 0.001,
-            'beta1': 0.8,
-            'beta2': 0.999,
-            'weight_decay': 0.0001
+            'learning_rate': 0.0001383081539997802,
+            'beta1': 0.8830358775573881,
+            'beta2': 0.9079054643000972,
+            'weight_decay': 0.0001883318291512319
         }
     elif model_name=="MaxViT":
-        num_epochs = 7
+        num_epochs = 10
         batch_size = 16
         n_layers_to_freeze = 2
         if img_size==224:
@@ -26,12 +26,14 @@ def load_model(model_name, num_classes, from_path=None, img_size=512):
             model = timm.create_model('maxvit_base_tf_384.in21k_ft_in1k', pretrained=True, num_classes=4)
         elif img_size==512:
             model = timm.create_model('maxvit_base_tf_512.in21k_ft_in1k', pretrained=True, num_classes=4)
+        else:
+            raise Exception("Ivalid image size: "+str(img_size))
         model = freeze_layers(model, n_layers_to_freeze)
         hyperparameters = {
-            'learning_rate': 0.01,
-            'beta1': 0.9,
-            'beta2': 0.99,
-            'weight_decay': 0.001
+            'learning_rate': 0.0001597562835117293,
+            'beta1': 0.9368281565589722,
+            'beta2': 0.9383386647844132,
+            'weight_decay': 0.00008324695766965101
         }
     else:
         raise Exception("Invalid model name.")
@@ -57,7 +59,6 @@ def get_loss_optimizer(model, hyperparameters, class_counts, device):
     print("class weights:",class_weights)
 
     # Define the loss function with class weights
-    # criterion = nn.CrossEntropyLoss(weight=class_weights)
     criterion = FocalLoss(gamma=0.7, weights=class_weights)
     print("Using Focal Loss...")
     
@@ -150,9 +151,6 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
 
         print(f'Train Loss: {train_epoch_loss:.4f}  |  Train ROC AUC: {train_roc_auc:.4f}  |  Train Balanced Accuracy: {train_bal_acc:.4f}')
 
-        conf_mat_train = pd.DataFrame(confusion_matrix(all_train_labels, all_train_preds), index=unique_labels, columns=unique_labels)
-        print('\nConfusion Matrix (Train):\n',conf_mat_train,'\n',sep='')
-
         # Validation
         model.eval()
         running_loss = 0.0
@@ -186,9 +184,6 @@ def train_model(model, criterion, optimizer, train_loader, val_loader, test_load
         val_balanced_accuracy_scores.append(val_bal_acc)
 
         print(f'Validation Loss: {val_epoch_loss:.4f}  |  Validation ROC AUC: {val_roc_auc:.4f}  |  Validation Balanced Accuracy: {val_bal_acc:.4f}')
-
-        conf_mat = pd.DataFrame(confusion_matrix(all_labels, all_preds), index=unique_labels, columns=unique_labels)
-        print('\nConfusion Matrix (Val):\n',conf_mat,'\n',sep='')
 
         wandb.log({"train_loss":train_epoch_loss, "val_loss":val_epoch_loss, "roc_auc_train":train_roc_auc, "roc_auc_val":val_roc_auc, "balanced_accuracy_train":train_bal_acc, "balanced_accuracy_val":val_bal_acc})
     

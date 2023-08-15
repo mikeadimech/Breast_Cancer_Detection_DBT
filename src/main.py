@@ -9,7 +9,7 @@ def fine_tuning(model_name, img_size, verbose, device):
     # Read dataset
     df = read_dataset(dataset_path)
 
-    n_augment = 1
+    n_augment = 0
     num_classes = 4
 
     model, hyperparameters, num_epochs, batch_size, img_size, n_layers_to_freeze = load_model(model_name, num_classes, img_size=img_size)

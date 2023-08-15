@@ -1,4 +1,4 @@
-# https://github.com/MaciejMazurowski/duke-dbt-data/blob/master/duke_dbt_data.py
+# from https://github.com/MaciejMazurowski/duke-dbt-data/blob/master/duke_dbt_data.py
 from typing import AnyStr, BinaryIO, Dict, List, NamedTuple, Optional, Union
 
 import matplotlib
